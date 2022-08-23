@@ -27,6 +27,8 @@ jobs:
     name: Initialize
     runs-on: ubuntu-20.04
     steps:
+      - name: Debug Inputs
+        run: echo "${{ toJSON(inputs) }}"
       - name: checkout
         uses: actions/checkout@v2.4.0
         with:
