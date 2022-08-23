@@ -203,9 +203,9 @@ jobs:
         uses: Ki-Insurance/github-data-workflows/.github/actions/docker/bump-and-validate-image@v1
         with:
           dockerfile-dir: apps/${{ matrix.app }}
-          registry: ${{ inputs.registry }}
-          git-commit-user: ${{ inputs.git-commit-user }}
-          git-commit-email:  ${{ inputs.git-commit-email }}
+          registry: ${{ github.event.inputs.registry }}
+          git-commit-user: ${{ github.event.inputs.git-commit-user }}
+          git-commit-email:  ${{ github.event.inputs.git-commit-email }}
 
   bump-jobs-image:
     name: Bump Jobs Images

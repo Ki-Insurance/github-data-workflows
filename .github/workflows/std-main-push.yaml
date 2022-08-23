@@ -54,7 +54,7 @@ jobs:
         id: last_successful_commit_push
         with:
           branch: main
-          workflow_id: ${{ inputs.workflow-file }}
+          workflow_id: ${{ github.event.inputs.workflow-file }}
           github_token: ${{ secrets.github-token }}
       - name: Get Files Changes Info
         id: info
@@ -88,9 +88,9 @@ jobs:
       - name: sync images
         uses: Ki-Insurance/github-data-workflows/.github/actions/docker/sync-images@v1
         with:
-          registry: ${{ inputs.registry }}
-          workload_identity_provider: ${{ inputs.workload_identity_provider }}
-          workload_identity_service_account: ${{ inputs.workload_identity_service_account }}
+          registry: ${{ github.event.inputs.registry }}
+          workload_identity_provider: ${{ github.event.inputs.workload_identity_provider }}
+          workload_identity_service_account: ${{ github.event.inputs.workload_identity_service_account }}
 
   terragrunt-apply-dev:
     runs-on: ubuntu-20.04
@@ -176,8 +176,8 @@ jobs:
         with:
           environment: dev
           gcp-service-account-key: ${{ secrets.k8s-key }}
-          cluster-name: ${{ inputs.k8s-cluster-name }}
-          cluster-project: ${{ inputs.k8s-cluster-project }}
+          cluster-name: ${{ github.event.inputs.k8s-cluster-name }}
+          cluster-project: ${{ github.event.inputs.k8s-cluster-project }}
 
   draft-release:
     runs-on: ubuntu-20.04
