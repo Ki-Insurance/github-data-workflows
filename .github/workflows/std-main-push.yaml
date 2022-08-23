@@ -68,6 +68,8 @@ jobs:
       kubernetes-changes-overlay-dev: ${{ steps.info.outputs.kubernetes-changes-overlay-dev }}
       kubernetes-changes-overlay-live: ${{ steps.info.outputs.kubernetes-changes-overlay-live }}
       kubernetes-changes-base: ${{ steps.info.outputs.kubernetes-changes-base }}
+      apps-changes: ${{ steps.info.outputs.apps-changes }}
+      jobs-changes: ${{ steps.info.outputs.jobs-changes }}
 
   sync-image-registry:
     permissions:
@@ -79,7 +81,9 @@ jobs:
       init
     if: |
       always() 
-      && needs.init.outputs.kubernetes-changes-base == 'true'
+      && needs.init.outputs.kubernetes-changes-base == 'true' 
+      && ( needs.init.outputs.apps-changes == 'true' 
+        || needs.init.outputs.jobs-changes == 'true' )
     steps:
       - name: checkout
         uses: actions/checkout@v2.4.0
