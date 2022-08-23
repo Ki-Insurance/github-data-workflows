@@ -74,21 +74,21 @@ runs:
         files_ignore: |
           ${{ inputs.terragrunt-root-directory }}/.gitignore
           ${{ inputs.terragrunt-root-directory }}/vars/**
-        base-sha: ${{ inputs.base-sha }}
+        base_sha: ${{ inputs.base-sha }}
     - name: check terragrunt dev config changes
       id: terragunt-dev-config-changes
       uses: tj-actions/changed-files@v23
       with:
         files: |
           ${{ inputs.terragrunt-root-directory }}/vars/dev.yaml
-        base-sha: ${{ inputs.base-sha }}
+        base_sha: ${{ inputs.base-sha }}
     - name: check terragrunt live config changes
       id: terragunt-live-config-changes
       uses: tj-actions/changed-files@v23
       with:
         files: |
           ${{ inputs.terragrunt-root-directory }}/vars/live.yaml
-        base-sha: ${{ inputs.base-sha }}
+        base_sha: ${{ inputs.base-sha }}
     - name: check any apps changes
       id: apps-changes
       uses: tj-actions/changed-files@v23
@@ -97,7 +97,7 @@ runs:
         files_ignore: |
           ${{ inputs.apps-directory }}/README.md
           ${{ inputs.apps-directory }}/.gitignore
-        base-sha: ${{ inputs.base-sha }}
+        base_sha: ${{ inputs.base-sha }}
     - name: get list of apps that changed
       id: apps-list-changes
       run: |
@@ -122,7 +122,7 @@ runs:
         files_ignore: |
           ${{ inputs.jobs-directory }}/README.md
           ${{ inputs.jobs-directory }}/.gitignore
-        base-sha: ${{ inputs.base-sha }}
+        base_sha: ${{ inputs.base-sha }}
     - name: get list of job files that changed
       id: jobs-list-changes
       run: |
@@ -144,19 +144,19 @@ runs:
       uses: tj-actions/changed-files@v23
       with:
         files: ${{ inputs.kubernetes-root-directory }}/${{ inputs.kubernetes-overlays-directory }}/dev/**
-        base-sha: ${{ inputs.base-sha }}
+        base_sha: ${{ inputs.base-sha }}
     - name: check kubernetes changes overlay live
       id: kubernetes-changes-overlay-live
       uses: tj-actions/changed-files@v23
       with:
         files: ${{ inputs.kubernetes-root-directory }}/${{ inputs.kubernetes-overlays-directory }}/live/**
-        base-sha: ${{ inputs.base-sha }}
+        base_sha: ${{ inputs.base-sha }}
     - name: check kubernetes changes base
       id: kubernetes-changes-base
       uses: tj-actions/changed-files@v23
       with:
         files: ${{ inputs.kubernetes-root-directory }}/${{ inputs.kubernetes-base-directory }}/**
-        base-sha: ${{ inputs.base-sha }}
+        base_sha: ${{ inputs.base-sha }}
     - name: get last author
       id: last-author
       run: echo "::set-output name=value::$(git log -1 --pretty=format:'%an')"
