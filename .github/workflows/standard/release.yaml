@@ -29,10 +29,10 @@ jobs:
           fetch-depth: 0
       - name: get latest release
         id: release
-        uses: Ki-Insurance/github-data-workflows/actions/global/get-last-release@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/global/get-last-release@v1
       - name: Get Files Changes Info
         id: info
-        uses: Ki-Insurance/github-data-workflows/actions/global/files-changes-info@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/global/files-changes-info@v1
         with:
           base-sha: ${{ steps.release.outputs.commit-sha }}
     outputs:
@@ -54,7 +54,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: terragrunt apply
-        uses: Ki-Insurance/github-data-workflows/actions/terragrunt/apply@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/terragrunt/apply@v1
         with:
           gcp-service-account-key: ${{ secrets.ci-cd-key }}
           terraform-version: 1.1.6
@@ -76,7 +76,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: check flux deployment status
-        uses: Ki-Insurance/github-data-workflows/actions/kubernetes/check-flux-deployment@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/kubernetes/check-flux-deployment@v1
         with:
           environment: live
           gcp-service-account-key: ${{ secrets.k8s-key }}

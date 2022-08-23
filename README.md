@@ -24,7 +24,7 @@ You can also decide to use the GitHub Actions without the workflow, for example:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: check flux deployment status
-        uses: @Ki-Insurance/github-data-workflows/actions/kubernetes/check-flux-deployment@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/kubernetes/check-flux-deployment@v1
         with:
           environment: live
           gcp-service-account-key: xxxx

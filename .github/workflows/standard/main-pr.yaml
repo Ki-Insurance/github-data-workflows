@@ -33,7 +33,7 @@ jobs:
           fetch-depth: 0
       - name: Get Files Changes Info
         id: info
-        uses: Ki-Insurance/github-data-workflows/actions/global/files-changes-info@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/global/files-changes-info@v1
         with:
           base-sha: ${{ github.event.pull_request.base.sha }}
     outputs:
@@ -62,7 +62,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: kubernetes validation
-        uses: Ki-Insurance/github-data-workflows/actions/kubernetes/validate@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/kubernetes/validate@v1
         with:
           environment: dev
 
@@ -79,7 +79,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: kubernetes validation
-        uses: Ki-Insurance/github-data-workflows/actions/kubernetes/validate@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/kubernetes/validate@v1
         with:
           environment: live
 
@@ -98,7 +98,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: tests
-        uses: Ki-Insurance/github-data-workflows/actions/app/gradle@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/app/gradle@v1
         with:
           java-version: 17
           gcp-service-account-key: ${{ secrets.ci-cd-key-dev }}
@@ -120,7 +120,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: tests
-        uses: Ki-Insurance/github-data-workflows/actions/job/python@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/job/python@v1
         with:
           python-version: 3.9
           gcp-service-account-key: ${{ secrets.ci-cd-key-dev }}
@@ -142,7 +142,7 @@ jobs:
       - name: fetch branch
         run: git fetch origin ${GITHUB_HEAD_REF} && git checkout ${GITHUB_HEAD_REF}
       - name: terragrunt plan
-        uses: Ki-Insurance/github-data-workflows/actions/terragrunt/plan@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/terragrunt/plan@v1
         with:
           gcp-service-account-key: ${{ secrets.ci-cd-key-dev }}
           terraform-version: 1.1.6
@@ -162,7 +162,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: terragrunt plan
-        uses: Ki-Insurance/github-data-workflows/actions/terragrunt/plan@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/terragrunt/plan@v1
         with:
           gcp-service-account-key: ${{ secrets.ci-cd-key-live }}
           terraform-version: 1.1.6
@@ -200,7 +200,7 @@ jobs:
       - name: fetch branch
         run: git fetch origin ${GITHUB_HEAD_REF} && git checkout ${GITHUB_HEAD_REF}
       - name: bump and validate image
-        uses: Ki-Insurance/github-data-workflows/actions/docker/bump-and-validate-image@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/docker/bump-and-validate-image@v1
         with:
           dockerfile-dir: apps/${{ matrix.app }}
           registry: ${{ inputs.registry }}
@@ -240,6 +240,6 @@ jobs:
       - name: fetch branch
         run: git fetch origin ${GITHUB_HEAD_REF} && git checkout ${GITHUB_HEAD_REF}
       - name: bump and validate image
-        uses: Ki-Insurance/github-data-workflows/actions/docker/bump-and-validate-image@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/docker/bump-and-validate-image@v1
         with:
           dockerfile-dir: jobs/${{ matrix.job }}
