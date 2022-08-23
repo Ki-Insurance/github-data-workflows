@@ -31,18 +31,6 @@ jobs:
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
-      - name: Debug Inputs
-        run: |
-          echo "${{ toJSON(inputs) }}"
-          echo "1 ${{ inputs.registry }}"
-          echo "2 ${{ github.event.inputs.registry }}"
-          echo "3 ${{ inputs.git-commit-user }}"
-          echo "4 ${{ github.event.inputs.git-commit-user }}"
-      - name: Debug Inputs 2
-        uses: Ki-Insurance/github-data-workflows/.github/actions/dummy@main
-        with:
-          registry: ${{ inputs.registry }}
-          git-commit-user: ${{ inputs.git-commit-user }}
       - name: Get Files Changes Info
         id: info
         uses: Ki-Insurance/github-data-workflows/.github/actions/global/files-changes-info@v1
@@ -211,6 +199,18 @@ jobs:
         uses: actions/checkout@v2.4.0
       - name: fetch branch
         run: git fetch origin ${GITHUB_HEAD_REF} && git checkout ${GITHUB_HEAD_REF}
+      - name: Debug Inputs
+        run: |
+          echo "${{ toJSON(inputs) }}"
+          echo "1 ${{ inputs.registry }}"
+          echo "2 ${{ github.event.inputs.registry }}"
+          echo "3 ${{ inputs.git-commit-user }}"
+          echo "4 ${{ github.event.inputs.git-commit-user }}"
+      - name: Debug Inputs 2
+        uses: Ki-Insurance/github-data-workflows/.github/actions/dummy@main
+        with:
+          registry: ${{ inputs.registry }}
+          git-commit-user: ${{ inputs.git-commit-user }}
       - name: bump and validate image
         uses: Ki-Insurance/github-data-workflows/.github/actions/docker/bump-and-validate-image@v1
         with:
