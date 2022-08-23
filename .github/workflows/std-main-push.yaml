@@ -54,7 +54,7 @@ jobs:
         id: last_successful_commit_push
         with:
           branch: main
-          workflow_id: ${{ github.event.inputs.workflow-file }}
+          workflow_id: ${{ inputs.workflow-file }}
           github_token: ${{ secrets.github-token }}
       - name: Get Files Changes Info
         id: info
@@ -187,6 +187,7 @@ jobs:
     runs-on: ubuntu-20.04
     name: Generate Draft Release
     needs:
+      - init
       - terragrunt-plan-live
       - terragrunt-apply-dev
       - flux-check-dev
@@ -194,6 +195,7 @@ jobs:
       - validate-kubernetes-live
     if: |
       always() 
+      && needs.init.result != 'failure' 
       && needs.sync-image-registry.result != 'failure' 
       && needs.flux-check-dev.result != 'failure' 
       && needs.terragrunt-apply-dev.result != 'failure' 
