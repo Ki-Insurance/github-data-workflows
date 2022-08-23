@@ -80,5 +80,5 @@ jobs:
         with:
           environment: live
           gcp-service-account-key: ${{ secrets.k8s-key }}
-          cluster-name: ${{ github.event.inputs.k8s-cluster-name }}
-          cluster-project: ${{ github.event.inputs.k8s-cluster-project }}
+          cluster-name: ${{ inputs.k8s-cluster-name }}
+          cluster-project: ${{ inputs.k8s-cluster-project }}
