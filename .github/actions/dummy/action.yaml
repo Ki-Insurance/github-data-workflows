@@ -1,0 +1,17 @@
+name: Dummy
+description: Dummy
+inputs:
+  registry:
+    description: Registry DNS name
+    required: true
+  git-commit-user:
+    description: User used for bump commits
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: validate docker build
+      run: |
+        echo "1 ${{ inputs.registry }}"
+        echo "2 ${{ inputs.git-commit-user }}"
+      shell: bash
