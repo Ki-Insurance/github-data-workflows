@@ -58,7 +58,7 @@ jobs:
           github_token: ${{ secrets.github-token }}
       - name: Get Files Changes Info
         id: info
-        uses: @Ki-Insurance/github-data-workflows/actions/global/files-changes-info@v1
+        uses: Ki-Insurance/github-data-workflows/actions/global/files-changes-info@v1
         with:
           base-sha: ${{ steps.last_successful_commit_push.outputs.commit_hash }}
     outputs:
@@ -86,7 +86,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: sync images
-        uses: @Ki-Insurance/github-data-workflows/actions/docker/sync-images@v1
+        uses: Ki-Insurance/github-data-workflows/actions/docker/sync-images@v1
         with:
           registry: ${{ inputs.registry }}
           workload_identity_provider: ${{ inputs.workload_identity_provider }}
@@ -107,7 +107,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: terragrunt apply
-        uses: @Ki-Insurance/github-data-workflows/actions/terragrunt/apply@v1
+        uses: Ki-Insurance/github-data-workflows/actions/terragrunt/apply@v1
         with:
           gcp-service-account-key: ${{ secrets.ci-cd-key-dev }}
           terraform-version: 1.1.6
@@ -129,7 +129,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: terragrunt plan
-        uses: @Ki-Insurance/github-data-workflows/actions/terragrunt/plan@v1
+        uses: Ki-Insurance/github-data-workflows/actions/terragrunt/plan@v1
         with:
           gcp-service-account-key: ${{ secrets.ci-cd-key-live }}
           terraform-version: 1.1.6
@@ -151,7 +151,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: kubernetes validation
-        uses: @Ki-Insurance/github-data-workflows/actions/kubernetes/validate@v1
+        uses: Ki-Insurance/github-data-workflows/actions/kubernetes/validate@v1
         with:
           environment: live
 
@@ -172,7 +172,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: check flux deployment status
-        uses: @Ki-Insurance/github-data-workflows/actions/kubernetes/check-flux-deployment@v1
+        uses: Ki-Insurance/github-data-workflows/actions/kubernetes/check-flux-deployment@v1
         with:
           environment: dev
           gcp-service-account-key: ${{ secrets.k8s-key }}
@@ -199,4 +199,4 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: generate draft release
-        uses: @Ki-Insurance/github-data-workflows/actions/global/auto-draft-release@v1
+        uses: Ki-Insurance/github-data-workflows/actions/global/auto-draft-release@v1
