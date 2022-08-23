@@ -30,10 +30,10 @@ jobs:
       - name: Debug Inputs
         run: |
           echo "${{ toJSON(inputs) }}"
-          echo "${{ inputs.registry }}"
-          echo "${{ github.event.inputs.registry }}"
-          echo "${{ inputs.git-commit-user }}"
-          echo "${{ github.event.inputs.git-commit-user }}"
+          echo "1 ${{ inputs.registry }}"
+          echo "2 ${{ github.event.inputs.registry }}"
+          echo "3 ${{ inputs.git-commit-user }}"
+          echo "4 ${{ github.event.inputs.git-commit-user }}"
       - name: checkout
         uses: actions/checkout@v2.4.0
         with:
