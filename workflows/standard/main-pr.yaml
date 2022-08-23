@@ -1,0 +1,245 @@
+name: PR - Validate
+on:
+  workflow_call:
+    inputs:
+      registry:
+        description: docker registry uri
+        required: true
+        type: string
+      git-commit-user:
+        description: User used for bump commits
+        type: string
+        required: true
+      git-commit-email:
+        description: Email used for bump commits
+        type: string
+        required: true
+    secrets:
+      ci-cd-key-dev:
+        description: CICD Key Containing the Service Account credentials in dev environment
+        required: true
+      ci-cd-key-live:
+        description: CICD Key Containing the Service Account credentials in live environment
+        required: true
+
+jobs:
+  init:
+    name: Initialize
+    runs-on: ubuntu-20.04
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+        with:
+          fetch-depth: 0
+      - name: Get Files Changes Info
+        id: info
+        uses: @Ki-Insurance/github-data-workflows/actions/global/files-changes-info@v1
+        with:
+          base-sha: ${{ github.event.pull_request.base.sha }}
+    outputs:
+      terragrunt-base-changes: ${{ steps.info.outputs.terragrunt-base-changes }}
+      terragunt-dev-config-changes: ${{ steps.info.outputs.terragunt-dev-config-changes }}
+      terragunt-live-config-changes: ${{ steps.info.outputs.terragunt-live-config-changes }}
+      apps-changes: ${{ steps.info.outputs.apps-changes }}
+      jobs-changes: ${{ steps.info.outputs.jobs-changes }}
+      kubernetes-changes-overlay-dev: ${{ steps.info.outputs.kubernetes-changes-overlay-dev }}
+      kubernetes-changes-overlay-live: ${{ steps.info.outputs.kubernetes-changes-overlay-live }}
+      kubernetes-changes-base: ${{ steps.info.outputs.kubernetes-changes-base }}
+      last-author: ${{ steps.info.outputs.last-author }}
+      apps-matrix: ${{ steps.info.outputs.apps-list-changes}}
+      jobs-matrix: ${{ steps.info.outputs.jobs-list-changes }}
+
+  validate-kubernetes-dev:
+    name: Validate Kubernetes DEV
+    runs-on: ubuntu-20.04
+    needs:
+      - init
+    if: |
+      always() 
+      && (needs.init.outputs.kubernetes-changes-overlay-dev == 'true' 
+        || needs.init.outputs.kubernetes-changes-base == 'true')
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+      - name: kubernetes validation
+        uses: @Ki-Insurance/github-data-workflows/actions/kubernetes/validate@v1
+        with:
+          environment: dev
+
+  validate-kubernetes-live:
+    name: Validate Kubernetes LIVE
+    runs-on: ubuntu-20.04
+    needs:
+      - init
+    if: |
+      always() 
+      && (needs.init.outputs.kubernetes-changes-overlay-live == 'true' 
+        || needs.init.outputs.kubernetes-changes-base == 'true')
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+      - name: kubernetes validation
+        uses: @Ki-Insurance/github-data-workflows/actions/kubernetes/validate@v1
+        with:
+          environment: live
+
+  tests-apps:
+    name: Test Apps
+    runs-on: ubuntu-20.04
+    needs:
+      - init
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.init.outputs.apps-matrix) }}
+    if: |
+      always() 
+      && needs.init.outputs.apps-changes == 'true'
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+      - name: tests
+        uses: @Ki-Insurance/github-data-workflows/actions/app/gradle@v1
+        with:
+          java-version: 17
+          gcp-service-account-key: ${{ secrets.ci-cd-key-dev }}
+          working-directory: apps/${{ matrix.app }}
+          integration: true
+
+  tests-jobs:
+    name: Test Jobs
+    runs-on: ubuntu-20.04
+    needs:
+      - init
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.init.outputs.jobs-matrix) }}
+    if: |
+      always() 
+      && needs.init.outputs.jobs-changes == 'true'
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+      - name: tests
+        uses: @Ki-Insurance/github-data-workflows/actions/job/python@v1
+        with:
+          python-version: 3.9
+          gcp-service-account-key: ${{ secrets.ci-cd-key-dev }}
+          working-directory: jobs/${{ matrix.job }}
+          integration: true
+
+  terragrunt-plan-dev:
+    name: Terragrunt Plan DEV
+    runs-on: ubuntu-20.04
+    needs:
+      - init
+    if: |
+      always()
+      && (needs.init.outputs.terragrunt-base-changes == 'true' 
+        || needs.init.outputs.terragunt-dev-config-changes == 'true')
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+      - name: fetch branch
+        run: git fetch origin ${GITHUB_HEAD_REF} && git checkout ${GITHUB_HEAD_REF}
+      - name: terragrunt plan
+        uses: @Ki-Insurance/github-data-workflows/actions/terragrunt/plan@v1
+        with:
+          gcp-service-account-key: ${{ secrets.ci-cd-key-dev }}
+          terraform-version: 1.1.6
+          terragrunt-version: 0.36.2
+          environment: dev
+
+  terragrunt-plan-live:
+    name: Terragrunt Plan LIVE
+    runs-on: ubuntu-20.04
+    needs:
+      - init
+    if: |
+      always() 
+      && (needs.init.outputs.terragrunt-base-changes == 'true' 
+        || needs.init.outputs.terragunt-live-config-changes == 'true')
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+      - name: terragrunt plan
+        uses: @Ki-Insurance/github-data-workflows/actions/terragrunt/plan@v1
+        with:
+          gcp-service-account-key: ${{ secrets.ci-cd-key-live }}
+          terraform-version: 1.1.6
+          terragrunt-version: 0.36.2
+          environment: live
+
+  bump-apps-image:
+    name: Bump Apps Images
+    runs-on: ubuntu-20.04
+    needs:
+      - init
+      - terragrunt-plan-dev
+      - terragrunt-plan-live
+      - tests-apps
+      - tests-jobs
+      - validate-kubernetes-dev
+      - validate-kubernetes-live
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.init.outputs.apps-matrix) }}
+      max-parallel: 1
+    if: |
+      always() 
+      && needs.init.outputs.apps-changes == 'true' 
+      && needs.terragrunt-plan-dev.result != 'failure' 
+      && needs.terragrunt-plan-live.result != 'failure' 
+      && needs.validate-kubernetes-dev.result != 'failure' 
+      && needs.validate-kubernetes-live.result != 'failure' 
+      && needs.tests-apps.result != 'failure' 
+      && needs.tests-jobs.result != 'failure' 
+      && needs.init.outputs.last-author != 'ki-cicd'
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+      - name: fetch branch
+        run: git fetch origin ${GITHUB_HEAD_REF} && git checkout ${GITHUB_HEAD_REF}
+      - name: bump and validate image
+        uses: @Ki-Insurance/github-data-workflows/actions/docker/bump-and-validate-image@v1
+        with:
+          dockerfile-dir: apps/${{ matrix.app }}
+          registry: ${{ inputs.registry }}
+          git-commit-user: ${{ inputs.git-commit-user }}
+          git-commit-email:  ${{ inputs.git-commit-email }}
+
+  bump-jobs-image:
+    name: Bump Jobs Images
+    runs-on: ubuntu-20.04
+    needs:
+      - init
+      - terragrunt-plan-dev
+      - terragrunt-plan-live
+      - tests-apps
+      - tests-jobs
+      - validate-kubernetes-dev
+      - validate-kubernetes-live
+      - bump-apps-image
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.init.outputs.jobs-matrix) }}
+      max-parallel: 1
+    if: |
+      always() 
+      && needs.init.outputs.jobs-changes == 'true' 
+      && needs.terragrunt-plan-dev.result != 'failure' 
+      && needs.terragrunt-plan-live.result != 'failure' 
+      && needs.validate-kubernetes-dev.result != 'failure' 
+      && needs.validate-kubernetes-live.result != 'failure' 
+      && needs.tests-apps.result != 'failure' 
+      && needs.tests-jobs.result != 'failure' 
+      && needs.bump-and-validate-apps-image.result != 'failure' 
+      && needs.init.outputs.last-author != 'ki-cicd'
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+      - name: fetch branch
+        run: git fetch origin ${GITHUB_HEAD_REF} && git checkout ${GITHUB_HEAD_REF}
+      - name: bump and validate image
+        uses: @Ki-Insurance/github-data-workflows/actions/docker/bump-and-validate-image@v1
+        with:
+          dockerfile-dir: jobs/${{ matrix.job }}

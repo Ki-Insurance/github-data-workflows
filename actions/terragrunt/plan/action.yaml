@@ -1,0 +1,57 @@
+name: Terragrunt Plan
+description: Run Terragrunt Plan
+inputs:
+  gcp-service-account-key:
+    description: GCP Service Account Key (JSON format)
+    required: true
+  environment:
+    description: "Project Environment: dev, uat, live, demo"
+    required: true
+  terraform-version:
+    description: Terraform release version
+    required: true
+  terragrunt-version:
+    description: Terragrunt release version
+    required: true
+  format:
+    description: do you want to check terraform format?
+    required: true
+    default: 'true'
+  working-directory:
+    description: Location of terragrunt root folder
+    required: true
+    default: infrastructure/terragrunt
+  modules-directory:
+    description: name of the folder containing terragrunt modules within working-directory
+    required: true
+    default: modules
+runs:
+  using: "composite"
+  steps:
+    - name: Install Terraform
+      uses: hashicorp/setup-terraform@v1.3.2
+      with:
+        terraform_version: ${{ inputs.terraform-version }}
+        terraform_wrapper: false
+    - name: Install Terragrunt
+      uses: autero1/action-terragrunt@v1.1.1
+      with:
+        terragrunt_version: ${{ inputs.terragrunt-version }}
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v0.2.1
+      with:
+        service_account_key: ${{ inputs.gcp-service-account-key }}
+        export_default_credentials: true
+    - name: Terragrunt Format Check
+      if: inputs.format == 'true'
+      env:
+        TG_ENV: ${{ inputs.environment }}
+      working-directory: ${{ inputs.working-directory }}
+      run: terragrunt run-all fmt -check -recursive --terragrunt-working-dir ${{ inputs.modules-directory }}
+      shell: bash
+    - name: Terragrunt Plan
+      env:
+        TG_ENV: ${{ inputs.environment }}
+      working-directory: ${{ inputs.working-directory }}
+      run: terragrunt run-all plan --terragrunt-working-dir ${{ inputs.modules-directory }} --terragrunt-include-external-dependencies --terragrunt-non-interactive
+      shell: bash

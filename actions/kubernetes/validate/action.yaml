@@ -1,0 +1,33 @@
+name: Validate Kubernetes
+description: Run Kubernetes validations
+inputs:
+  working-directory:
+    description: Location of k8s root folder
+    required: true
+    default: infrastructure/kubernetes
+  environment:
+    description: "Project Environment: dev, uat, live, demo"
+    required: true
+  overlays-directory:
+    description: Location of the overlays directory within the working-directory
+    required: true
+    default: overlays
+  kustomize-version:
+    description: version of kustomize
+    required: true
+    default:  3.8.7
+runs:
+  using: "composite"
+  steps:
+    - name: Install kustomize
+      uses: imranismail/setup-kustomize@v1
+      with:
+        kustomize-version: ${{ inputs.kustomize-version }}
+    - name: Yaml lint
+      run: |
+        yamllint -d "{extends: default, rules: {line-length: {max: 120}}}" ${{ inputs.working-directory }}/*
+      shell: bash
+    - name: kustomize build
+      working-directory: ${{ inputs.working-directory }}/${{ inputs.overlays-directory }}/${{ inputs.environment }}
+      run: kustomize build .
+      shell: bash

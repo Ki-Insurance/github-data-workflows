@@ -1,0 +1,84 @@
+name: Release - Deploy Live
+on:
+  workflow_call:
+    inputs:
+      k8s-cluster-name:
+        description: k8 cluster name in prod
+        type: string
+        required: true
+      k8s-cluster-project:
+        description: k8s cluster project in prod
+        type: string
+        required: true
+    secrets:
+      ci-cd-key:
+        description: CICD Service Account credentials in live environment
+        required: true
+      k8s-key:
+        description: CICD Service Account credentials to access k8s prod cluster
+        required: true
+
+jobs:
+  init:
+    runs-on: ubuntu-20.04
+    name: Initialize
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+        with:
+          fetch-depth: 0
+      - name: get latest release
+        id: release
+        uses: @Ki-Insurance/github-data-workflows/actions/global/get-last-release@v1
+      - name: Get Files Changes Info
+        id: info
+        uses: @Ki-Insurance/github-data-workflows/actions/global/files-changes-info@v1
+        with:
+          base-sha: ${{ steps.release.outputs.commit-sha }}
+    outputs:
+      terragrunt-base-changes: ${{ steps.info.outputs.terragrunt-base-changes }}
+      terragunt-live-config-changes: ${{ steps.info.outputs.terragunt-live-config-changes }}
+      kubernetes-changes-overlay-live: ${{ steps.info.outputs.kubernetes-changes-overlay-live }}
+      kubernetes-changes-base: ${{ steps.info.outputs.kubernetes-changes-base }}
+
+  terragrunt-apply-live:
+    runs-on: ubuntu-20.04
+    name: Terragrunt Apply LIVE
+    needs:
+      init
+    if: |
+      always() 
+      && ( needs.init.outputs.terragunt-live-config-changes == 'true' 
+        || needs.init.outputs.terragrunt-base-changes == 'true' )
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+      - name: terragrunt apply
+        uses: @Ki-Insurance/github-data-workflows/actions/terragrunt/apply@v1
+        with:
+          gcp-service-account-key: ${{ secrets.ci-cd-key }}
+          terraform-version: 1.1.6
+          terragrunt-version: 0.36.2
+          environment: live
+
+  flux-check-live:
+    runs-on: ubuntu-20.04
+    name: Flux Check LIVE
+    needs:
+      - init
+      - terragrunt-apply-live
+    if: |
+      always() 
+      && ( needs.init.outputs.kubernetes-changes-overlay-live == 'true' 
+        || needs.init.outputs.kubernetes-changes-base == 'true' ) 
+      && needs.terragrunt-apply-live.result != 'failure'
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+      - name: check flux deployment status
+        uses: @Ki-Insurance/github-data-workflows/actions/kubernetes/check-flux-deployment@v1
+        with:
+          environment: live
+          gcp-service-account-key: ${{ secrets.k8s-key }}
+          cluster-name: ${{ inputs.k8s-cluster-name }}
+          cluster-project: ${{ inputs.k8s-cluster-project }}

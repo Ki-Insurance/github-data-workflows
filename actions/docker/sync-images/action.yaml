@@ -1,0 +1,67 @@
+name: Sync Docker Images
+description: Sync Docker images with the Artifact Registry
+inputs:
+  registry:
+    description: Registry DNS name
+    required: true
+  workload_identity_provider:
+    description: workloard identity provider
+    required: true
+  workload_identity_service_account:
+    description: workload identity service account
+    required: true
+  kustomization-path:
+    description: Path of the kustomization file containing the images
+    required: true
+    default: infrastructure/kubernetes/base/kustomization.yaml
+runs:
+  using: "composite"
+  steps:
+    - name: Install Docker
+      uses: docker/setup-buildx-action@v1.6.0
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v0.6.0
+    - id: auth
+      name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v0.4.1
+      with:
+        workload_identity_provider: ${{ inputs.workload_identity_provider }}
+        service_account: ${{ inputs.workload_identity_service_account }}
+    - name: Docker login
+      run:  gcloud auth configure-docker -q europe-docker.pkg.dev
+      shell: bash
+    - name: Sync Images with registry
+      run: |
+        IMAGES=$(yq -e '.images[] | .newName + ":" + .newTag' ${{ inputs.kustomization-path }} || true )
+        if [[ -z "${IMAGES}" ]]; then
+          echo "No images found"
+        else
+        
+          while IFS= read -r image; do
+            
+            IMAGE_NAME=$(echo ${image} | cut -f4 -d '/' | cut -f1 -d ':')
+            if [[ "${IMAGE_NAME}" == app_* || "${IMAGE_NAME}" == job_* ]]; then
+  
+              IMAGE_INFO=$(gcloud artifacts docker images describe "${image}" || true)
+              if [[ -z "${IMAGE_INFO}" ]]; then
+          
+                echo "${image} is not in the registry"
+                SHA=$(echo ${image} | cut -f4 -d '/' | cut -f2 -d ':' | cut -f2 -d '_')
+                IMAGE_PATH=${IMAGE_NAME/\_/s\/}
+                
+                git checkout "${SHA}"
+                echo "Build image in ${IMAGE_PATH}"
+                docker build "${IMAGE_PATH}" -t "${image}"
+                echo "Push image: ${image}"
+                docker push "${image}"
+              else
+                echo "${image} is already in the registry"
+              fi
+        
+            else
+              echo "This is not a job or application image. Ignore the image"
+            fi
+
+          done <<< "${IMAGES}"
+        fi
+      shell: bash

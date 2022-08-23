@@ -1,0 +1,202 @@
+name: Main - Deploy Dev
+on:
+  workflow_call:
+    inputs:
+      registry:
+        description: docker registry uri
+        required: true
+        type: string
+      workload_identity_provider:
+        description: workloard identity provider
+        type: string
+        required: true
+      workload_identity_service_account:
+        description: workload identity service account
+        type: string
+        required: true
+      k8s-cluster-name:
+        description: k8 cluster name in nonprod
+        type: string
+        required: true
+      k8s-cluster-project:
+        description: k8s cluster project in nonprod
+        type: string
+        required: true
+      workflow-file:
+        description: name of the workflow file (used to compare with the last successful workflow)
+        type: string
+        required: true
+    secrets:
+      ci-cd-key-dev:
+        description: CICD Service Account credentials in dev environment
+        required: true
+      ci-cd-key-live:
+        description: CICD Service Account credentials in live environment
+        required: true
+      k8s-key:
+        description: CICD Service Account credentials to access k8s nonprod cluster
+        required: true
+      github-token:
+        description: GitHub Token
+        required: true
+
+jobs:
+  init:
+    name: Initialize
+    runs-on: ubuntu-20.04
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+        with:
+          fetch-depth: 0
+      - name: Get last successful commit
+        uses: nrwl/last-successful-commit-action@v1
+        id: last_successful_commit_push
+        with:
+          branch: main
+          workflow_id: ${{ inputs.workflow-file }}
+          github_token: ${{ secrets.github-token }}
+      - name: Get Files Changes Info
+        id: info
+        uses: @Ki-Insurance/github-data-workflows/actions/global/files-changes-info@v1
+        with:
+          base-sha: ${{ steps.last_successful_commit_push.outputs.commit_hash }}
+    outputs:
+      terragrunt-base-changes: ${{ steps.info.outputs.terragrunt-base-changes }}
+      terragunt-dev-config-changes: ${{ steps.info.outputs.terragunt-dev-config-changes }}
+      terragunt-live-config-changes: ${{ steps.info.outputs.terragunt-live-config-changes }}
+      kubernetes-changes-overlay-dev: ${{ steps.info.outputs.kubernetes-changes-overlay-dev }}
+      kubernetes-changes-overlay-live: ${{ steps.info.outputs.kubernetes-changes-overlay-live }}
+      kubernetes-changes-base: ${{ steps.info.outputs.kubernetes-changes-base }}
+
+  sync-image-registry:
+    permissions:
+      contents: 'write'
+      id-token: 'write'
+    runs-on: ubuntu-20.04
+    name: Sync images with the registry
+    needs:
+      init
+    if: |
+      always() 
+      && needs.init.outputs.kubernetes-changes-base == 'true'
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+        with:
+          fetch-depth: 0
+      - name: sync images
+        uses: @Ki-Insurance/github-data-workflows/actions/docker/sync-images@v1
+        with:
+          registry: ${{ inputs.registry }}
+          workload_identity_provider: ${{ inputs.workload_identity_provider }}
+          workload_identity_service_account: ${{ inputs.workload_identity_service_account }}
+
+  terragrunt-apply-dev:
+    runs-on: ubuntu-20.04
+    name: Terragrunt Apply DEV
+    needs:
+      - init
+      - sync-image-registry
+    if: |
+      always() 
+      && ( needs.init.outputs.terragunt-dev-config-changes == 'true' 
+        || needs.init.outputs.terragrunt-base-changes == 'true' ) 
+      && needs.sync-image-registry.result != 'failure'
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+      - name: terragrunt apply
+        uses: @Ki-Insurance/github-data-workflows/actions/terragrunt/apply@v1
+        with:
+          gcp-service-account-key: ${{ secrets.ci-cd-key-dev }}
+          terraform-version: 1.1.6
+          terragrunt-version: 0.36.2
+          environment: dev
+
+  terragrunt-plan-live:
+    name: Terragrunt Plan LIVE
+    runs-on: ubuntu-20.04
+    needs:
+      - init
+      - sync-image-registry
+    if: |
+      always() 
+      && ( needs.init.outputs.terragunt-live-config-changes == 'true' 
+        || needs.init.outputs.terragrunt-base-changes == 'true' ) 
+      && needs.sync-image-registry.result != 'failure'
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+      - name: terragrunt plan
+        uses: @Ki-Insurance/github-data-workflows/actions/terragrunt/plan@v1
+        with:
+          gcp-service-account-key: ${{ secrets.ci-cd-key-live }}
+          terraform-version: 1.1.6
+          terragrunt-version: 0.36.2
+          environment: live
+
+  validate-kubernetes-live:
+    name: Validate Kubernetes LIVE
+    runs-on: ubuntu-20.04
+    needs:
+      - init
+      - sync-image-registry
+    if: |
+      always() 
+      && ( needs.init.outputs.kubernetes-changes-overlay-live == 'true' 
+        || needs.init.outputs.kubernetes-changes-base == 'true' ) 
+      && needs.sync-image-registry.result != 'failure'
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+      - name: kubernetes validation
+        uses: @Ki-Insurance/github-data-workflows/actions/kubernetes/validate@v1
+        with:
+          environment: live
+
+  flux-check-dev:
+    runs-on: ubuntu-20.04
+    name: Flux Check DEV
+    needs:
+      - init
+      - sync-image-registry
+      - terragrunt-apply-dev
+    if: |
+      always() 
+      && ( needs.init.outputs.kubernetes-changes-overlay-dev == 'true' 
+        || needs.init.outputs.kubernetes-changes-base == 'true' )  
+      && needs.sync-image-registry.result != 'failure' 
+      && needs.terragrunt-apply-dev.result != 'failure'
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+      - name: check flux deployment status
+        uses: @Ki-Insurance/github-data-workflows/actions/kubernetes/check-flux-deployment@v1
+        with:
+          environment: dev
+          gcp-service-account-key: ${{ secrets.k8s-key }}
+          cluster-name: ${{ inputs.k8s-cluster-name }}
+          cluster-project: ${{ inputs.k8s-cluster-project }}
+
+  draft-release:
+    runs-on: ubuntu-20.04
+    name: Generate Draft Release
+    needs:
+      - terragrunt-plan-live
+      - terragrunt-apply-dev
+      - flux-check-dev
+      - sync-image-registry
+      - validate-kubernetes-live
+    if: |
+      always() 
+      && needs.sync-image-registry.result != 'failure' 
+      && needs.flux-check-dev.result != 'failure' 
+      && needs.terragrunt-apply-dev.result != 'failure' 
+      && needs.terragrunt-plan-live.result != 'failure' 
+      && needs.validate-kubernetes-live.result != 'failure'
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+      - name: generate draft release
+        uses: @Ki-Insurance/github-data-workflows/actions/global/auto-draft-release@v1

@@ -1,0 +1,25 @@
+name: Get Last Release
+description: Get Last Release Commit Sha
+outputs:
+  commit-sha:
+    description: Commit sha of the last release
+    value: ${{ steps.release.outputs.commit_hash }}
+runs:
+  using: "composite"
+  steps:
+    - name: get last release
+      id: release
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        RELEASES=$(gh api --paginate "/repos/${{ github.repository }}/releases" | jq '.[] | select( .draft == false and .prerelease == false ) | {tag:.tag_name, sha:.target_commitish}' | jq --slurp || true)
+        if [[ -z "${RELEASES}" ]] || [[ "${RELEASES}" == "[]" ]] ; then
+          echo "no previous release found"
+          SHA=""
+        else
+          LENGTH=$(echo "${RELEASES}" | jq 'length')
+          PREVIOUS_VERSION_INDEX=$((LENGTH-2))
+          SHA=$(echo ${RELEASES} | jq -r "sort_by(.tag) | .[${PREVIOUS_VERSION_INDEX}] | .sha")
+        fi
+        echo "::set-output name=commit_hash::${SHA}"
+      shell: bash

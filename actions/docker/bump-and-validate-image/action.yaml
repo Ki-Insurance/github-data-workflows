@@ -1,0 +1,73 @@
+name: Bump image tag
+description: Bump image tag in kustomizations file
+inputs:
+  dockerfile-dir:
+    description: directory containing the Dockerfile generating the image
+    required: true
+  push:
+    description: Do you want to push the changes?
+    required: true
+    default: true
+  registry:
+    description: Registry DNS name
+    required: true
+  git-commit-user:
+    description: User used for bump commits
+    required: true
+  git-commit-email:
+    description: Email used for bump commits
+    required: true
+  kustomization-path:
+    description: Location of kubernetes kustomization file containing the image references
+    required: true
+    default: infrastructure/kubernetes/base/kustomization.yaml
+runs:
+  using: "composite"
+  steps:
+    - name: validate docker build
+      run: docker build ${{ inputs.dockerfile-dir }}
+      shell: bash
+    - name: generate image name and version
+      id: image
+      run: |
+        DIR=${{ inputs.dockerfile-dir }}
+        SHA="${{ github.event.pull_request.head.sha }}"
+        TAG="$(date '+%Y-%m-%d-%H-%M-%S')_${SHA:0:7}"
+        echo "::set-output name=name::${DIR/s\//_}"
+        echo "::set-output name=tag::$TAG"
+      shell: bash
+    - name: Bump image
+      run: |
+        echo 'check if images array exist'
+        IMAGES=$(yq e '.images' '${{ inputs.kustomization-path }}')
+        if [[ -z "${IMAGES}" ]]; then
+          echo 'Images array does not exist. Creating it ...'
+          yq e -i '.images |= []' '${{ inputs.kustomization-path }}'
+        fi
+        
+        echo 'check if image: ${{ steps.image.outputs.name }} exist in array'
+        IMAGE=$(yq e '.images[] | select(.name == "${{ steps.image.outputs.name }}")' '${{ inputs.kustomization-path }}')
+        if [[ -z "${IMAGE}" ]]; then
+          echo 'Image  ${{ steps.image.outputs.name }} is not in the array. Add it ...'
+          yq e -i '.images += [{"name": "${{ steps.image.outputs.name }}"}]' '${{ inputs.kustomization-path }}'
+        fi
+        
+        echo "Overwrite image newName and newTag for ${dir} overlay"
+        yq e -i \
+          '(.images[] | select(.name == "${{ steps.image.outputs.name }}") | .newTag ) |= "${{ steps.image.outputs.tag }}"' \
+          '${{ inputs.kustomization-path }}'
+        
+        yq e -i \
+          '(.images[] | select(.name == "${{ steps.image.outputs.name }}") | .newName ) |= "${{ inputs.registry }}/${{ steps.image.outputs.name }}"' \
+          '${{ inputs.kustomization-path }}'
+      shell: bash
+    - name: commit versions
+      run: |
+        git config --global user.name "${{ inputs.git-commit-user }}"
+        git config --global user.email "${{ inputs.git-commit-email }}"
+        git commit -am ':robot: auto bump image tag for ${{ steps.image.outputs.name }}'
+      shell: bash
+    - name: push
+      if: inputs.push == 'true'
+      run: git push
+      shell: bash

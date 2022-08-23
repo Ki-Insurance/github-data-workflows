@@ -1,0 +1,91 @@
+name: Check Flux Deployment
+description: Check Flux Deployment Status
+inputs:
+  environment:
+    description: environent overlay dev, live ...
+    required: true
+  kubernetes-overlays-directory:
+    description: Overlays directory within kubernetes-root-directory
+    required: true
+    default: infrastructure/kubernetes/overlays
+  health-check-condition:
+    description: Status to wait for the kustomization to be considered successful
+    required: true
+    default: ready
+  health-check-timeout:
+    description: Health check timeout
+    required: true
+    default: 5m
+  reconciliation-retry-count:
+    description: Number of times it will tries to check if the flux reconciled
+    required: true
+    default: 24
+  reconciliation-retry-delay:
+    description: delay (in seconds) between each retry count
+    required: true
+    default: 5
+  gcp-service-account-key:
+    description: GCP Service Account Key (JSON format)
+    required: true
+  cluster-name:
+    description: Kubernetes Cluster Name
+    required: true
+  cluster-project:
+    description: Kubernetes GCP Project ID
+    required: true
+  cluster-region:
+    description: Kubernetes Cluster Region
+    required: true
+    default: europe-west2
+runs:
+  using: "composite"
+  steps:
+    - name: install kubectl
+      uses: azure/setup-kubectl@v1
+    - name: install kustomize
+      uses: imranismail/setup-kustomize@v1
+    - name: Setup GKE Credentials
+      uses: google-github-actions/get-gke-credentials@v0.5.0
+      with:
+        cluster_name: ${{ inputs.cluster-name }}
+        location: ${{ inputs.cluster-region }}
+        credentials: ${{ inputs.gcp-service-account-key }}
+        project_id: ${{ inputs.cluster-project }}
+    - name: get revision
+      id: revision
+      run: |
+        TAG=$(echo "${{ github.ref }}" | cut -f3 -d '/')
+        echo "::set-output name=value::${TAG}/${{ github.sha }}"
+      shell: bash
+    - name: get namespace
+      id: namespace
+      run: |
+        NAMESPACE=$(yq e '.namespace' '${{ inputs.kubernetes-overlays-directory }}/${{ inputs.environment }}/kustomization.yaml')
+        echo "::set-output name=value::$NAMESPACE"
+      shell: bash
+    - name: check flux deployment status
+      run: |
+        newrev=$(kubectl get -n "${{ steps.namespace.outputs.value }}" kustomization/${{ steps.namespace.outputs.value }} -o=jsonpath='{.status.lastAppliedRevision}')
+        counter=0
+        until [[ "$newrev" == "${{ steps.revision.outputs.value }}" || $counter -gt ${{ inputs.reconciliation-retry-count }} ]]; do
+          echo "Compared: $newrev : ${{ steps.revision.outputs.value }}"
+          newrev=$(kubectl get -n "${{ steps.namespace.outputs.value }}" kustomization/${{ steps.namespace.outputs.value }} -o=jsonpath='{.status.lastAppliedRevision}')
+          echo "Not yet synced. Waiting for ${{ inputs.reconciliation-retry-delay }}s.."
+          sleep ${{ inputs.reconciliation-retry-delay }}
+          counter=$(($counter+1))
+        done
+        
+        if [[ $counter -gt ${{ inputs.reconciliation-retry-count }} ]]; then
+          echo ""
+          echo "*Deployment failed. Requires investigation.*"
+          exit 1
+        else
+          echo "Reconcile Complete"
+        fi
+        
+        kubectl wait \
+          -n "${{ steps.namespace.outputs.value }}" \
+          "kustomization/${{ steps.namespace.outputs.value }}" \
+          --for=condition=${{ inputs.health-check-condition }} \
+          --timeout=${{ inputs.health-check-timeout }}
+      shell: bash
