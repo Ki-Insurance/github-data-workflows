@@ -27,8 +27,6 @@ jobs:
     name: Initialize
     runs-on: ubuntu-20.04
     steps:
-      - name: Debug Inputs
-        run: echo "${{ toJSON(inputs) }}"
       - name: checkout
         uses: actions/checkout@v2.4.0
         with:
@@ -197,6 +195,13 @@ jobs:
       && needs.tests-jobs.result != 'failure' 
       && needs.init.outputs.last-author != 'ki-cicd'
     steps:
+      - name: Debug Inputs
+        run: | 
+          echo "${{ toJSON(inputs) }}"
+          echo "${{ inputs.registry }}"
+          echo "${{ github.event.inputs.registry }}"
+          echo "${{ inputs.git-commit-user }}"
+          echo "${{ github.event.inputs.git-commit-user }}"
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: fetch branch
