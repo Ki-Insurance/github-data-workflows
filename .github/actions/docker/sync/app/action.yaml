@@ -78,11 +78,19 @@ runs:
     - name: Build Images
       run: |
         echo "${{ steps.images.outputs.value }}" | jq -c '.[]' | while read img; do
-          git checkout $(echo "$img" | jq -r '.sha')
+          
+          IMAGE_PATH=$(echo "$img" | jq -r '.path')
+          IMAGE=$(echo "$img" | jq -r '.image')
+          SHA=$(echo "$img" | jq -r '.sha')
+          
+          git checkout "${SHA}"
+          cp "${GOOGLE_APPLICATION_CREDENTIALS}" "${IMAGE_PATH}/.credentials.json"
+          
           docker build \
-            --build-arg GOOGLE_APPLICATION_CREDENTIALS \
-            -t $(echo "$img" | jq -r '.image') \
-            $(echo "$img" | jq -r '.path')
+            -t "${IMAGE}" \
+            "${IMAGE_PATH}"
+          
+          rm "${IMAGE_PATH}/.credentials.json"
         done
       shell: bash
     - name: Authenticate to Docker Registry
@@ -90,11 +98,10 @@ runs:
       with:
         workload_identity_provider: ${{ inputs.docker-workload-identity-provider }}
         service_account: ${{ inputs.docker-workload-identity-service-account }}
-        export_environment_variables: true
-        create_credentials_file: true
     - name: Push Images
       run: |
         echo "${{ steps.images.outputs.value }}" | jq -c '.[]' | while read img; do
-          docker push $(echo "$img" | jq -r '.image')
+          IMAGE=$(echo "$img" | jq -r '.image')
+          docker push "${IMAGE}"
         done
       shell: bash
