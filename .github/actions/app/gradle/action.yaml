@@ -55,17 +55,19 @@ runs:
         service_account: ${{ inputs.workload-identity-service-account }}
         export_environment_variables: true
         create_credentials_file: true
+        cleanup_credentials: true
     - name: Docker Build test
       working-directory: ${{ inputs.working-directory }}
-      run: docker build --build-arg GOOGLE_APPLICATION_CREDENTIALS .
+      run: |
+        cp ${GOOGLE_APPLICATION_CREDENTIALS} /tmp/.credentials.json
+        docker build .
+        rm /tmp/.credentials.json
       shell: bash
     - name: Authenticate to Google Cloud
       if: inputs.integration == 'true'
       uses: google-github-actions/auth@v0
       with:
         credentials_json: ${{ inputs.gcp-service-account-key }}
-        export_environment_variables: true
-        create_credentials_file: true
     - name: Run Integration Tests
       if: inputs.integration == 'true'
       working-directory: ${{ inputs.working-directory }}
