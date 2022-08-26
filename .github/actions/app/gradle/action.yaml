@@ -27,7 +27,6 @@ runs:
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v0
     - name: Authenticate to Artifact Registry
-      id: auth
       uses: google-github-actions/auth@v0
       with:
         workload_identity_provider: ${{ inputs.workload-identity-provider }}
@@ -50,7 +49,6 @@ runs:
       run: ./gradlew jacocoTestVerification
       shell: bash
     - name: Authenticate to Artifact Registry
-      id: auth
       uses: google-github-actions/auth@v0
       with:
         workload_identity_provider: ${{ inputs.workload-identity-provider }}
