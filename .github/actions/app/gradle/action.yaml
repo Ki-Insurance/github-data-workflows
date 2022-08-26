@@ -4,6 +4,12 @@ inputs:
   gcp-service-account-key:
     description: GCP Service Account Key (JSON format)
     required: true
+  workload-identity-provider:
+    description: Identity provider for maven artifact registry
+    required: true
+  workload-identity-service-account:
+    description: Service Account to access maven artifact registry
+    required: true
   java-version:
     description: java version
     required: true
@@ -19,10 +25,15 @@ runs:
   using: "composite"
   steps:
     - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v0.2.1
+      uses: google-github-actions/setup-gcloud@v0
+    - name: Authenticate to Artifact Registry
+      id: auth
+      uses: google-github-actions/auth@v0
       with:
-        service_account_key: ${{ inputs.gcp-service-account-key }}
-        export_default_credentials: true
+        workload_identity_provider: ${{ inputs.workload-identity-provider }}
+        service_account: ${{ inputs.workload-identity-service-account }}
+        export_environment_variables: true
+        create_credentials_file: true
     - name: Setup Java
       uses: actions/setup-java@v3
       with:
@@ -40,6 +51,17 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       run: ./gradlew jacocoTestVerification
       shell: bash
+    - name: Docker Build test
+      working-directory: ${{ inputs.working-directory }}
+      run: docker build --build-arg GOOGLE_APPLICATION_CREDENTIALS .
+      shell: bash
+    - name: Authenticate to Google Cloud
+      if: inputs.integration == 'true'
+      uses: google-github-actions/auth@v0
+      with:
+        credentials_json: ${{ inputs.gcp-service-account-key }}
+        export_environment_variables: true
+        create_credentials_file: true
     - name: Run Integration Tests
       if: inputs.integration == 'true'
       working-directory: ${{ inputs.working-directory }}

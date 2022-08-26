@@ -1,0 +1,89 @@
+name: Sync Docker Images
+description: Sync Docker images with the Artifact Registry
+inputs:
+  registry:
+    description: Registry DNS name
+    required: true
+  docker-workload-identity-provider:
+    description: Identity provider for docker artifact registry
+    required: true
+  docker-workload-identity-service-account:
+    description: Service Account to access docker artifact registry
+    required: true
+  pypi-workload-identity-provider:
+    description: Identity provider for pypi artifact registry
+    required: true
+  pypi-workload-identity-service-account:
+    description: Service Account to access pypi artifact registry
+    required: true
+  kustomization-path:
+    description: Path of the kustomization file containing the images
+    required: true
+    default: infrastructure/kubernetes/base/kustomization.yaml
+runs:
+  using: "composite"
+  steps:
+    - name: Install Docker
+      uses: docker/setup-buildx-action@v1
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v0
+    - name: Authenticate to PYPI Artifact Registry
+      id: auth
+      uses: google-github-actions/auth@v0
+      with:
+        workload_identity_provider: ${{ inputs.pypi-workload-identity-provider }}
+        service_account: ${{ inputs.pypi-workload-identity-service-account }}
+        token_format: "access_token"
+        create_credentials_file: false
+    - name: Setup Poetry env vars for Artifact Registry
+      run: |
+        echo "POETRY_HTTP_BASIC_GOOGLE_USERNAME=oauth2accesstoken" >> $GITHUB_ENV
+        echo "POETRY_HTTP_BASIC_GOOGLE_PASSWORD=${{ steps.auth.outputs.access_token }}" >> $GITHUB_ENV
+      shell: bash
+    - name: Authenticate to Docker Registry
+      uses: google-github-actions/auth@v0
+      with:
+        workload_identity_provider: ${{ inputs.docker-workload-identity-provider }}
+        service_account: ${{ inputs.docker-workload-identity-service-account }}
+    - name: Docker login
+      run: gcloud auth configure-docker -q europe-docker.pkg.dev
+      shell: bash
+    - name: Sync Images with registry
+      run: |
+        IMAGES=$(yq -e '.images[] | .newName + ":" + .newTag' ${{ inputs.kustomization-path }} || true )
+        if [[ -z "${IMAGES}" ]]; then
+          echo "No images found"
+        else
+        
+          while IFS= read -r image; do
+            
+            IMAGE_NAME=$(echo ${image} | cut -f4 -d '/' | cut -f1 -d ':')
+            if [[ "${IMAGE_NAME}" == job_* ]]; then
+  
+              IMAGE_INFO=$(gcloud artifacts docker images describe "${image}" || true)
+              if [[ -z "${IMAGE_INFO}" ]]; then
+          
+                echo "${image} is not in the registry"
+                SHA=$(echo ${image} | cut -f4 -d '/' | cut -f2 -d ':' | cut -f2 -d '_')
+                IMAGE_PATH=${IMAGE_NAME/\_/s\/}
+                
+                git checkout "${SHA}"
+                echo "Build image in ${IMAGE_PATH}"
+                docker build \
+                  --build-arg POETRY_HTTP_BASIC_GOOGLE_USERNAME \
+                  --build-arg POETRY_HTTP_BASIC_GOOGLE_PASSWORD \
+                  -t "${image}" \
+                  "${IMAGE_PATH}"
+                echo "Push image: ${image}"
+                docker push "${image}"
+              else
+                echo "${image} is already in the registry"
+              fi
+        
+            else
+              echo "This is not a job image. Ignore the image"
+            fi
+
+          done <<< "${IMAGES}"
+        fi
+      shell: bash

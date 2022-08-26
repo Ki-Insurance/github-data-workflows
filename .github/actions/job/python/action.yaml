@@ -4,13 +4,15 @@ inputs:
   gcp-service-account-key:
     description: GCP Service Account Key (JSON format)
     required: true
+  workload-identity-provider:
+    description: Identity provider for pypi artifact registry
+    required: true
+  workload-identity-service-account:
+    description: Service Account to access pypi artifact registry
+    required: true
   python-version:
     description: Python Version
     required: true
-  python-dm:
-    description: "Python dependency management tool, accepted values: [poetry, pip-tools]"
-    required: true
-    default: poetry
   working-directory:
     description: Location of python root folder
     required: true
@@ -22,21 +24,29 @@ runs:
   using: "composite"
   steps:
     - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v0.2.1
+      uses: google-github-actions/setup-gcloud@v0
+    - name: Authenticate to Artifact Registry
+      id: auth
+      uses: google-github-actions/auth@v0
       with:
-        service_account_key: ${{ inputs.gcp-service-account-key }}
-        export_default_credentials: true
+        workload_identity_provider: ${{ inputs.workload-identity-provider }}
+        service_account: ${{ inputs.workload-identity-service-account }}
+        token_format: "access_token"
+        create_credentials_file: false
+    - name: Setup Poetry env vars for Artifact Registry
+      run: |
+        echo "POETRY_HTTP_BASIC_GOOGLE_USERNAME=oauth2accesstoken" >> $GITHUB_ENV
+        echo "POETRY_HTTP_BASIC_GOOGLE_PASSWORD=${{ steps.auth.outputs.access_token }}" >> $GITHUB_ENV
+      shell: bash
     - name: Install Python
-      uses: actions/setup-python@v2.3.0
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ inputs.python-version }}
     - name: Install Dependency management
       run: |
         python -m pip install --upgrade pip
-        python -m pip install ${{ inputs.python-dm }}
-        if [[ "${{ inputs.python-dm }}" == "poetry" ]]; then
-          poetry config virtualenvs.create false
-        fi
+        python -m pip install poetry
+        poetry config virtualenvs.create false
       shell: bash
     - name: Install Python dependencies
       working-directory: ${{ inputs.working-directory }}
@@ -52,6 +62,19 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       run: make coverage
       shell: bash
+    - name: Docker Build test
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        docker build \
+          --build-arg POETRY_HTTP_BASIC_GOOGLE_USERNAME \
+          --build-arg POETRY_HTTP_BASIC_GOOGLE_PASSWORD \
+          .
+      shell: bash
+    - name: Authenticate to Google Cloud
+      if: inputs.integration == 'true'
+      uses: google-github-actions/auth@v0
+      with:
+        credentials_json: ${{ inputs.gcp-service-account-key }}
     - name: Run integration tests
       if: inputs.integration == 'true'
       working-directory: ${{ inputs.working-directory }}

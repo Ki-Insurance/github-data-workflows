@@ -24,9 +24,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: validate docker build
-      run: docker build ${{ inputs.dockerfile-dir }}
-      shell: bash
     - name: generate image name and version
       id: image
       run: |

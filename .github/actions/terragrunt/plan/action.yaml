@@ -29,19 +29,20 @@ runs:
   using: "composite"
   steps:
     - name: Install Terraform
-      uses: hashicorp/setup-terraform@v1.3.2
+      uses: hashicorp/setup-terraform@v1
       with:
         terraform_version: ${{ inputs.terraform-version }}
         terraform_wrapper: false
     - name: Install Terragrunt
-      uses: autero1/action-terragrunt@v1.1.1
+      uses: autero1/action-terragrunt@v1
       with:
         terragrunt_version: ${{ inputs.terragrunt-version }}
     - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v0.2.1
+      uses: google-github-actions/setup-gcloud@v0
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v0
       with:
-        service_account_key: ${{ inputs.gcp-service-account-key }}
-        export_default_credentials: true
+        credentials_json: ${{ inputs.gcp-service-account-key }}
     - name: Terragrunt Format Check
       if: inputs.format == 'true'
       env:

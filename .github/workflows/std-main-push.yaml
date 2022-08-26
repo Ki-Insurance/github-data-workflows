@@ -6,12 +6,28 @@ on:
         description: docker registry uri
         required: true
         type: string
-      workload_identity_provider:
-        description: workloard identity provider
+      pypi-workload-identity-provider:
+        description: Identity provider for pypi artifact registry
         type: string
         required: true
-      workload_identity_service_account:
-        description: workload identity service account
+      pypi-workload-identity-service-account:
+        description: Service Account to access pypi artifact registry
+        type: string
+        required: true
+      maven-workload-identity-provider:
+        description: Identity provider for maven artifact registry
+        type: string
+        required: true
+      maven-workload-identity-service-account:
+        description: Service Account to access maven artifact registry
+        type: string
+        required: true
+      docker-workload-identity-provider:
+        description: Identity provider for docker artifact registry
+        type: string
+        required: true
+      docker-workload-identity-service-account:
+        description: Service Account to access docker artifact registry
         type: string
         required: true
       k8s-cluster-name:
@@ -58,7 +74,7 @@ jobs:
           github_token: ${{ secrets.github-token }}
       - name: Get Files Changes Info
         id: info
-        uses: Ki-Insurance/github-data-workflows/.github/actions/global/files-changes-info@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/global/files-changes-info@main
         with:
           base-sha: ${{ steps.last_successful_commit_push.outputs.commit_hash }}
     outputs:
@@ -71,7 +87,7 @@ jobs:
       apps-changes: ${{ steps.info.outputs.apps-changes }}
       jobs-changes: ${{ steps.info.outputs.jobs-changes }}
 
-  sync-image-registry:
+  sync-app-image-registry:
     permissions:
       contents: 'write'
       id-token: 'write'
@@ -82,19 +98,46 @@ jobs:
     if: |
       always() 
       && needs.init.outputs.kubernetes-changes-base == 'true' 
-      && ( needs.init.outputs.apps-changes == 'true' 
-        || needs.init.outputs.jobs-changes == 'true' )
+      && needs.init.outputs.apps-changes == 'true'
     steps:
       - name: checkout
         uses: actions/checkout@v2.4.0
         with:
           fetch-depth: 0
       - name: sync images
-        uses: Ki-Insurance/github-data-workflows/.github/actions/docker/sync-images@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/docker/sync/app@main
         with:
           registry: ${{ github.event.inputs.registry }}
-          workload_identity_provider: ${{ inputs.workload_identity_provider }}
-          workload_identity_service_account: ${{ inputs.workload_identity_service_account }}
+          maven-workload-identity-provider: ${{ inputs.maven-workload-identity-provider }}
+          maven-workload-identity-service-account: ${{ inputs.maven-workload-identity-service-account }}
+          docker-workload-identity-provider: ${{ inputs.docker-workload-identity-provider }}
+          docker-workload-identity-service-account: ${{ inputs.docker-workload-identity-service-account }}
+
+  sync-job-image-registry:
+    permissions:
+      contents: 'write'
+      id-token: 'write'
+    runs-on: ubuntu-20.04
+    name: Sync images with the registry
+    needs:
+      init
+    if: |
+      always() 
+      && needs.init.outputs.kubernetes-changes-base == 'true' 
+      && needs.init.outputs.jobs-changes == 'true'
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+        with:
+          fetch-depth: 0
+      - name: sync images
+        uses: Ki-Insurance/github-data-workflows/.github/actions/docker/sync/job@main
+        with:
+          registry: ${{ github.event.inputs.registry }}
+          pypi-workload-identity-provider: ${{ inputs.pypi-workload-identity-provider }}
+          pypi-workload-identity-service-account: ${{ inputs.pypi-workload-identity-service-account }}
+          docker-workload-identity-provider: ${{ inputs.docker-workload-identity-provider }}
+          docker-workload-identity-service-account: ${{ inputs.docker-workload-identity-service-account }}
 
   terragrunt-apply-dev:
     runs-on: ubuntu-20.04
@@ -106,12 +149,13 @@ jobs:
       always() 
       && ( needs.init.outputs.terragunt-dev-config-changes == 'true' 
         || needs.init.outputs.terragrunt-base-changes == 'true' ) 
-      && needs.sync-image-registry.result != 'failure'
+      && needs.sync-app-image-registry.result != 'failure' 
+      && needs.sync-job-image-registry.result != 'failure'
     steps:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: terragrunt apply
-        uses: Ki-Insurance/github-data-workflows/.github/actions/terragrunt/apply@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/terragrunt/apply@main
         with:
           gcp-service-account-key: ${{ secrets.ci-cd-key-dev }}
           terraform-version: 1.1.6
@@ -123,17 +167,19 @@ jobs:
     runs-on: ubuntu-20.04
     needs:
       - init
-      - sync-image-registry
+      - sync-app-image-registry
+      - sync-job-image-registry
     if: |
       always() 
       && ( needs.init.outputs.terragunt-live-config-changes == 'true' 
         || needs.init.outputs.terragrunt-base-changes == 'true' ) 
-      && needs.sync-image-registry.result != 'failure'
+      && needs.sync-app-image-registry.result != 'failure' 
+      && needs.sync-job-image-registry.result != 'failure'
     steps:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: terragrunt plan
-        uses: Ki-Insurance/github-data-workflows/.github/actions/terragrunt/plan@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/terragrunt/plan@main
         with:
           gcp-service-account-key: ${{ secrets.ci-cd-key-live }}
           terraform-version: 1.1.6
@@ -145,17 +191,19 @@ jobs:
     runs-on: ubuntu-20.04
     needs:
       - init
-      - sync-image-registry
+      - sync-app-image-registry
+      - sync-job-image-registry
     if: |
       always() 
       && ( needs.init.outputs.kubernetes-changes-overlay-live == 'true' 
         || needs.init.outputs.kubernetes-changes-base == 'true' ) 
-      && needs.sync-image-registry.result != 'failure'
+      && needs.sync-app-image-registry.result != 'failure' 
+      && needs.sync-job-image-registry.result != 'failure'
     steps:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: kubernetes validation
-        uses: Ki-Insurance/github-data-workflows/.github/actions/kubernetes/validate@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/kubernetes/validate@main
         with:
           environment: live
 
@@ -164,19 +212,21 @@ jobs:
     name: Flux Check DEV
     needs:
       - init
-      - sync-image-registry
+      - sync-app-image-registry
+      - sync-job-image-registry
       - terragrunt-apply-dev
     if: |
       always() 
       && ( needs.init.outputs.kubernetes-changes-overlay-dev == 'true' 
         || needs.init.outputs.kubernetes-changes-base == 'true' )  
-      && needs.sync-image-registry.result != 'failure' 
+      && needs.sync-app-image-registry.result != 'failure' 
+      && needs.sync-job-image-registry.result != 'failure' 
       && needs.terragrunt-apply-dev.result != 'failure'
     steps:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: check flux deployment status
-        uses: Ki-Insurance/github-data-workflows/.github/actions/kubernetes/check-flux-deployment@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/kubernetes/check-flux-deployment@main
         with:
           environment: dev
           gcp-service-account-key: ${{ secrets.k8s-key }}
@@ -191,12 +241,14 @@ jobs:
       - terragrunt-plan-live
       - terragrunt-apply-dev
       - flux-check-dev
-      - sync-image-registry
+      - sync-app-image-registry
+      - sync-job-image-registry
       - validate-kubernetes-live
     if: |
       always() 
       && needs.init.result != 'failure' 
-      && needs.sync-image-registry.result != 'failure' 
+      && needs.sync-app-image-registry.result != 'failure' 
+      && needs.sync-job-image-registry.result != 'failure' 
       && needs.flux-check-dev.result != 'failure' 
       && needs.terragrunt-apply-dev.result != 'failure' 
       && needs.terragrunt-plan-live.result != 'failure' 
@@ -205,4 +257,4 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: generate draft release
-        uses: Ki-Insurance/github-data-workflows/.github/actions/global/auto-draft-release@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/global/auto-draft-release@main
