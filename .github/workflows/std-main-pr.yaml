@@ -33,12 +33,12 @@ on:
       apps-integration-test:
         description: run apps integration test?
         type: string
-        required: true
+        required: false
         default: false
       jobs-integration-test:
         description: run jobs integration test?
         type: string
-        required: true
+        required: false
         default: false
     secrets:
       ci-cd-key-dev:
