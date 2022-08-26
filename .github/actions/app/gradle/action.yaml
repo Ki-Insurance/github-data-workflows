@@ -32,8 +32,6 @@ runs:
       with:
         workload_identity_provider: ${{ inputs.workload-identity-provider }}
         service_account: ${{ inputs.workload-identity-service-account }}
-        export_environment_variables: true
-        create_credentials_file: true
     - name: Setup Java
       uses: actions/setup-java@v3
       with:
@@ -51,6 +49,14 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       run: ./gradlew jacocoTestVerification
       shell: bash
+    - name: Authenticate to Artifact Registry
+      id: auth
+      uses: google-github-actions/auth@v0
+      with:
+        workload_identity_provider: ${{ inputs.workload-identity-provider }}
+        service_account: ${{ inputs.workload-identity-service-account }}
+        export_environment_variables: true
+        create_credentials_file: true
     - name: Docker Build test
       working-directory: ${{ inputs.working-directory }}
       run: docker build --build-arg GOOGLE_APPLICATION_CREDENTIALS .
