@@ -144,7 +144,8 @@ jobs:
     name: Terragrunt Apply DEV
     needs:
       - init
-      - sync-image-registry
+      - sync-app-image-registry
+      - sync-job-image-registry
     if: |
       always() 
       && ( needs.init.outputs.terragunt-dev-config-changes == 'true' 
