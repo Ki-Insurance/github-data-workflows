@@ -59,9 +59,9 @@ runs:
     - name: Docker Build test
       working-directory: ${{ inputs.working-directory }}
       run: |
-        cp ${GOOGLE_APPLICATION_CREDENTIALS} /tmp/.credentials.json
+        cp ${GOOGLE_APPLICATION_CREDENTIALS} .credentials.json
         docker build .
-        rm /tmp/.credentials.json
+        rm .credentials.json
       shell: bash
     - name: Authenticate to Google Cloud
       if: inputs.integration == 'true'
