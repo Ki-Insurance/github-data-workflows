@@ -54,7 +54,7 @@ runs:
                 echo "${image} is not in the registry"
                 SHA=$(echo ${image} | cut -f4 -d '/' | cut -f2 -d ':' | cut -f2 -d '_')
                 IMAGE_PATH=${IMAGE_NAME/\_/s\/}
-                TO_PUSH="${TO_PUSH} { \"path\": \"${IMAGE_PATH}\", \"sha\": \"${SHA}\", \"image\": \"${image}\" },"
+                TO_PUSH="${TO_PUSH} { \\\"path\\\": \\\"${IMAGE_PATH}\\\", \\\"sha\\\": \\\"${SHA}\\\", \\\"image\\\": \\\"${image}\\\" },"
               else
                 echo "${image} is already in the registry"
               fi
