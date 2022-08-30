@@ -34,7 +34,7 @@ runs:
         terraform_version: ${{ inputs.terraform-version }}
         terraform_wrapper: false
     - name: Install Terragrunt
-      uses: autero1/action-terragrunt@v1
+      uses: autero1/action-terragrunt@v1.1.0
       with:
         terragrunt_version: ${{ inputs.terragrunt-version }}
     - name: Set up Cloud SDK
