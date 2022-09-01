@@ -16,10 +16,10 @@ inputs:
   maven-workload-identity-service-account:
     description: Service Account to maven python artifact registry
     required: true
-  kustomization-path:
+  apps-path:
     description: Path of the kustomization file containing the images
     required: true
-    default: infrastructure/kubernetes/base/kustomization.yaml
+    default: infrastructure/kubernetes/base/apps.yaml
 runs:
   using: "composite"
   steps:
@@ -39,7 +39,7 @@ runs:
       id: images
       run: |
         TO_PUSH='[ '
-        IMAGES=$(yq -e '.images[] | .newName + ":" + .newTag' ${{ inputs.kustomization-path }} || true )
+        IMAGES=$(yq -o=json -e '.spec.values.image' '${{ inputs.apps-path }}' | jq -r -s '.[]' || true )
         if [[ -z "${IMAGES}" ]]; then
           echo "No images found"
         else

@@ -16,10 +16,10 @@ inputs:
   pypi-workload-identity-service-account:
     description: Service Account to access pypi artifact registry
     required: true
-  kustomization-path:
+  jobs-path:
     description: Path of the kustomization file containing the images
     required: true
-    default: infrastructure/kubernetes/base/kustomization.yaml
+    default: infrastructure/kubernetes/base/jobs.yaml
 runs:
   using: "composite"
   steps:
@@ -50,7 +50,7 @@ runs:
       shell: bash
     - name: Sync Images with registry
       run: |
-        IMAGES=$(yq -e '.images[] | .newName + ":" + .newTag' ${{ inputs.kustomization-path }} || true )
+        IMAGES=$(yq -o=json -e '.spec.values.image' '${{ inputs.jobs-path }}' | jq -r -s '.[]' || true )
         if [[ -z "${IMAGES}" ]]; then
           echo "No images found"
         else

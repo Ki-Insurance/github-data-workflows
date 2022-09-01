@@ -17,10 +17,10 @@ inputs:
   git-commit-email:
     description: Email used for bump commits
     required: true
-  kustomization-path:
-    description: Location of kubernetes kustomization file containing the image references
+  base-path:
+    description: Location of kubernetes base folder
     required: true
-    default: infrastructure/kubernetes/base/kustomization.yaml
+    default: infrastructure/kubernetes/base
 runs:
   using: "composite"
   steps:
@@ -35,28 +35,10 @@ runs:
       shell: bash
     - name: Bump image
       run: |
-        echo 'check if images array exist'
-        IMAGES=$(yq e '.images' '${{ inputs.kustomization-path }}')
-        if [[ -z "${IMAGES}" ]]; then
-          echo 'Images array does not exist. Creating it ...'
-          yq e -i '.images |= []' '${{ inputs.kustomization-path }}'
-        fi
-        
-        echo 'check if image: ${{ steps.image.outputs.name }} exist in array'
-        IMAGE=$(yq e '.images[] | select(.name == "${{ steps.image.outputs.name }}")' '${{ inputs.kustomization-path }}')
-        if [[ -z "${IMAGE}" ]]; then
-          echo 'Image  ${{ steps.image.outputs.name }} is not in the array. Add it ...'
-          yq e -i '.images += [{"name": "${{ steps.image.outputs.name }}"}]' '${{ inputs.kustomization-path }}'
-        fi
-        
-        echo "Overwrite image newName and newTag for ${dir} overlay"
-        yq e -i \
-          '(.images[] | select(.name == "${{ steps.image.outputs.name }}") | .newTag ) |= "${{ steps.image.outputs.tag }}"' \
-          '${{ inputs.kustomization-path }}'
-        
-        yq e -i \
-          '(.images[] | select(.name == "${{ steps.image.outputs.name }}") | .newName ) |= "${{ inputs.registry }}/${{ steps.image.outputs.name }}"' \
-          '${{ inputs.kustomization-path }}'
+        APP=$(echo '${{ steps.image.outputs.name }}' | cut -d '_' -f2-)
+        TYPE=$(echo '${{ steps.image.outputs.name }}' | cut -d '_' -f1)
+        IMAGE="${{ inputs.registry }}/${{ steps.image.outputs.name }}:${{ steps.image.outputs.tag }}"
+        yq -i -e "select( .metadata.name == \"${APP}\").spec.values.image |= \"${IMAGE}\"" "${{ inputs.base-path }}/${TYPE}s.yaml"
       shell: bash
     - name: commit versions
       run: |
