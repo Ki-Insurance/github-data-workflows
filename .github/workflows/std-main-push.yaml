@@ -74,7 +74,7 @@ jobs:
           github_token: ${{ secrets.github-token }}
       - name: Get Files Changes Info
         id: info
-        uses: Ki-Insurance/github-data-workflows/.github/actions/global/files-changes-info@main
+        uses: Ki-Insurance/github-data-workflows/.github/actions/global/files-changes-info@v1
         with:
           base-sha: ${{ steps.last_successful_commit_push.outputs.commit_hash }}
     outputs:
@@ -105,7 +105,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: sync images
-        uses: Ki-Insurance/github-data-workflows/.github/actions/docker/sync/app@main
+        uses: Ki-Insurance/github-data-workflows/.github/actions/docker/sync/app@v1
         with:
           registry: ${{ github.event.inputs.registry }}
           maven-workload-identity-provider: ${{ inputs.maven-workload-identity-provider }}
@@ -131,7 +131,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: sync images
-        uses: Ki-Insurance/github-data-workflows/.github/actions/docker/sync/job@main
+        uses: Ki-Insurance/github-data-workflows/.github/actions/docker/sync/job@v1
         with:
           registry: ${{ github.event.inputs.registry }}
           pypi-workload-identity-provider: ${{ inputs.pypi-workload-identity-provider }}
@@ -156,7 +156,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: terragrunt apply
-        uses: Ki-Insurance/github-data-workflows/.github/actions/terragrunt/apply@main
+        uses: Ki-Insurance/github-data-workflows/.github/actions/terragrunt/apply@v1
         with:
           gcp-service-account-key: ${{ secrets.ci-cd-key-dev }}
           terraform-version: 1.1.6
@@ -180,7 +180,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: terragrunt plan
-        uses: Ki-Insurance/github-data-workflows/.github/actions/terragrunt/plan@main
+        uses: Ki-Insurance/github-data-workflows/.github/actions/terragrunt/plan@v1
         with:
           gcp-service-account-key: ${{ secrets.ci-cd-key-live }}
           terraform-version: 1.1.6
@@ -204,7 +204,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: kubernetes validation
-        uses: Ki-Insurance/github-data-workflows/.github/actions/kubernetes/validate@main
+        uses: Ki-Insurance/github-data-workflows/.github/actions/kubernetes/validate@v1
         with:
           environment: live
 
@@ -227,7 +227,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: check flux deployment status
-        uses: Ki-Insurance/github-data-workflows/.github/actions/kubernetes/check-flux-deployment@main
+        uses: Ki-Insurance/github-data-workflows/.github/actions/kubernetes/check-flux-deployment@v1
         with:
           environment: dev
           gcp-service-account-key: ${{ secrets.k8s-key }}
@@ -258,4 +258,4 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: generate draft release
-        uses: Ki-Insurance/github-data-workflows/.github/actions/global/auto-draft-release@main
+        uses: Ki-Insurance/github-data-workflows/.github/actions/global/auto-draft-release@v1
