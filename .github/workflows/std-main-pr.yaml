@@ -248,6 +248,7 @@ jobs:
       - terragrunt-plan-live
       - tests-apps
       - tests-jobs
+      - tests-cloud-functions
       - validate-kubernetes-dev
       - validate-kubernetes-live
     strategy:
@@ -263,6 +264,7 @@ jobs:
       && needs.validate-kubernetes-live.result != 'failure' 
       && needs.tests-apps.result != 'failure' 
       && needs.tests-jobs.result != 'failure' 
+      && needs.tests-cloud-functions.result != 'failure' 
       && needs.init.outputs.last-author != 'ki-cicd'
     steps:
       - name: checkout
@@ -286,6 +288,7 @@ jobs:
       - terragrunt-plan-live
       - tests-apps
       - tests-jobs
+      - tests-cloud-functions
       - validate-kubernetes-dev
       - validate-kubernetes-live
       - bump-apps-image
@@ -302,6 +305,7 @@ jobs:
       && needs.validate-kubernetes-live.result != 'failure' 
       && needs.tests-apps.result != 'failure' 
       && needs.tests-jobs.result != 'failure' 
+      && needs.tests-cloud-functions.result != 'failure' 
       && needs.bump-and-validate-apps-image.result != 'failure' 
       && needs.init.outputs.last-author != 'ki-cicd'
     steps:
@@ -326,6 +330,7 @@ jobs:
       - terragrunt-plan-live
       - tests-apps
       - tests-jobs
+      - tests-cloud-functions
       - validate-kubernetes-dev
       - validate-kubernetes-live
       - bump-apps-image
@@ -345,6 +350,7 @@ jobs:
       && needs.tests-jobs.result != 'failure' 
       && needs.bump-and-validate-apps-image.result != 'failure' 
       && needs.bump-jobs-image.result != 'failure' 
+      && needs.tests-cloud-functions.result != 'failure' 
       && needs.init.outputs.last-author != 'ki-cicd'
     steps:
       - name: checkout

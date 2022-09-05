@@ -34,7 +34,7 @@ runs:
       shell: bash
     - name: Bump cloud function
       run: |
-       yq -i e '.cloud_functions[] | filter( .name == "${{ inputs.cloud-function-name }}" ).archive_path |= "cloud_functions/${{ inputs.cloud-function-name }}/version/${{ steps.tag.outputs.value }}"/shadow-all.jar' '${{ inputs.cloud-function-tf-config-file }}'
+       yq -i e '.cloud_functions[] | filter( .name == "${{ inputs.cloud-function-name }}" ).archive_path |= "cloud_functions/${{ inputs.cloud-function-name }}/version/${{ steps.tag.outputs.value }}/shadow-all.jar"' '${{ inputs.cloud-function-tf-config-file }}'
       shell: bash
     - name: commit versions
       run: |
