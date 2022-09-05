@@ -1,0 +1,50 @@
+name: Push Image to Registry
+description: Push Docker image to GCP registry
+inputs:
+  gcp-service-account-key-dev:
+    description: GCP Service Account Key (JSON format)
+    required: true
+  gcp-service-account-key-live:
+    description: GCP Service Account Key (JSON format)
+    required: true
+  deployment-bucket-dev:
+    description: GCS bucket to store the archive
+    required: true
+  deployment-bucket-live:
+    description: GCS bucket to store archive
+    required: true
+  cloud-function-name:
+    description: The name of the function being deployed
+    required: true
+  working-directory:
+    description: Path of the folder containing the Dockerfile
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v0
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v0
+      with:
+        credentials_json: ${{ inputs.gcp-service-account-key-dev }}
+    - name: Get Last Jar
+      id: archive
+      run: |
+        LAST_ARCHIVE=$(gsutil ls "gs://${{ inputs.deployment-bucket-dev }}/cloud_functions/${{ inputs.cloud-function-name }}/version/**" | tail -n 1)
+        VERSION=$(echo ${LAST_ARCHIVE} | cut -d '/' -f7)
+        echo "::set-output name=path::${LAST_ARCHIVE}"
+        echo "::set-output name=version::${VERSION}"
+      shell: bash
+    - name: Copy Dev archive to Local
+      working-directory: ${{ inputs.working-directory }}
+      run: gsutil cp ${{ steps.archive.outputs.path }} ./
+      shell: bash
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v0
+      with:
+        credentials_json: ${{ inputs.gcp-service-account-key-live }}
+    - name: Copy Local archive to Live
+      working-directory: ${{ inputs.working-directory }}
+      run: gsutil cp ./*.zip gs://${{ inputs.deployment-bucket-live }}/cloud_functions/${{ inputs.cloud-function-name }}/version/${{ steps.archive.outputs.version }}/
+      shell: bash

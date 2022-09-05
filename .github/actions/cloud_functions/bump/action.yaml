@@ -1,0 +1,48 @@
+name: Bump Cloud Function
+description: Bump cloud function in terraform file
+inputs:
+  cloud-function-name:
+    description: name of the cloud function
+    required: true
+  cloud-function-tf-config-file:
+    description: directory containing the Dockerfile generating the image
+    required: true
+    default: infrastructure/terragrunt/config/config.yaml
+  push:
+    description: Do you want to push the changes?
+    required: true
+    default: true
+  git-commit-user:
+    description: User used for bump commits
+    required: true
+  git-commit-email:
+    description: Email used for bump commits
+    required: true
+  base-path:
+    description: Location of kubernetes base folder
+    required: true
+    default: infrastructure/kubernetes/base
+runs:
+  using: "composite"
+  steps:
+    - name: generate tag
+      id: tag
+      run: |
+        SHA="${{ github.event.pull_request.head.sha }}"
+        TAG="$(date '+%Y-%m-%d-%H-%M-%S')_${SHA:0:7}"
+        echo "::set-output name=value::$TAG"
+      shell: bash
+    - name: Bump cloud function
+      run: |
+       yq -i e '.cloud_functions[] | filter( .name == "${{ inputs.cloud-function-name }}" ).archive_path |= "cloud_functions/${{ inputs.cloud-function-name }}/version/${{ steps.tag.outputs.value }}"/shadow-all.jar' '${{ inputs.cloud-function-tf-config-file }}'
+      shell: bash
+    - name: commit versions
+      run: |
+        git config --global user.name "${{ inputs.git-commit-user }}"
+        git config --global user.email "${{ inputs.git-commit-email }}"
+        git commit -am ':robot: auto bump image tag for ${{ steps.image.outputs.name }}'
+      shell: bash
+    - name: push
+      if: inputs.push == 'true'
+      run: git push
+      shell: bash

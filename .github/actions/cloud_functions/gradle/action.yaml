@@ -1,0 +1,59 @@
+name: Test Cloud Functions
+description: Test cloud function
+inputs:
+  gcp-service-account-key:
+    description: GCP Service Account Key (JSON format)
+    required: true
+  java-version:
+    description: java version
+    required: true
+  working-directory:
+    description: Path of the folder containing the Dockerfile
+    required: true
+  integration:
+    description: do you want to run integration tests?
+    required: true
+    default: 'false'
+  workload-identity-provider:
+    description: Identity provider for maven artifact registry
+    required: true
+  workload-identity-service-account:
+    description: Service Account to access maven artifact registry
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v0
+    - name: Authenticate to Artifact Registry
+      uses: google-github-actions/auth@v0
+      with:
+        workload_identity_provider: ${{ inputs.workload-identity-provider }}
+        service_account: ${{ inputs.workload-identity-service-account }}
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: temurin
+        java-version: ${{ inputs.java-version }}
+    - name: Compile
+      working-directory: ${{ inputs.working-directory }}
+      run: ./gradlew build -x test -x spotlessCheck
+      shell: bash
+    - name: Run Linter
+      working-directory: ${{ inputs.working-directory }}
+      run: ./gradlew spotlessCheck
+      shell: bash
+    - name: Run Test with Coverage
+      working-directory: ${{ inputs.working-directory }}
+      run: ./gradlew jacocoTestVerification
+      shell: bash
+    - name: Authenticate to Google Cloud
+      if: inputs.integration == 'true'
+      uses: google-github-actions/auth@v0
+      with:
+        credentials_json: ${{ inputs.gcp-service-account-key }}
+    - name: Run Test for integration
+      if: inputs.integration == 'true'
+      working-directory: ${{ inputs.working-directory }}
+      run: ./gradlew integration
+      shell: bash

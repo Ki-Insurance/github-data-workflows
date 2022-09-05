@@ -1,0 +1,64 @@
+name: Push Cloud Function
+description: Push cloud function to the cloud storage bucket
+inputs:
+  gcp-service-account-key:
+    description: GCP Service Account Key (JSON format)
+    required: true
+  cloud-function-tf-config-file:
+    description: directory containing the Dockerfile generating the image
+    required: true
+    default: infrastructure/terragrunt/config/config.yaml
+  java-version:
+    description: java version
+    required: true
+  deployment-bucket:
+    description: GCS bucket to store the archive
+    required: true
+  functions-app-name:
+    description: The name of the function being deployed
+    required: true
+  working-directory:
+    description: Path of the folder containing the Dockerfile
+    required: true
+  workload-identity-provider:
+    description: Identity provider for maven artifact registry
+    required: true
+  workload-identity-service-account:
+    description: Service Account to access maven artifact registry
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v0
+    - name: Authenticate to Artifact Registry
+      uses: google-github-actions/auth@v0
+      with:
+        workload_identity_provider: ${{ inputs.workload-identity-provider }}
+        service_account: ${{ inputs.workload-identity-service-account }}
+    - name: get archive path
+      id: archive
+      run: |
+        ARCHIVE_PATH=$(yq e '.cloud_functions[] | filter( .name == "${{ inputs.functions-app-name }}" ) | .archive_path' '${{ inputs.cloud-function-tf-config-file }}')
+        echo "::set-output name=path::${ARCHIVE_PATH}"
+      shell: bash
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: temurin
+        java-version: ${{ inputs.java-version }}
+    - name: Create shadow jar
+      working-directory: ${{ inputs.working-directory }}
+      run: ./gradlew shadowJar
+      shell: bash
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v0
+      with:
+        credentials_json: ${{ inputs.gcp-service-account-key }}
+    - name: Deployment of the archive to relevant folder
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        cd build/libs/
+        zip shadow-all.zip shadow-all.jar
+        gsutil cp shadow-all.zip gs://${{ inputs.deployment-bucket }}/${{ steps.archive.outputs.path }}
+      shell: bash

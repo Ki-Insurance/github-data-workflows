@@ -42,6 +42,11 @@ on:
         description: name of the workflow file (used to compare with the last successful workflow)
         type: string
         required: true
+      cloud-function-deployment-bucket:
+        description: Bucket used to deploy cloud functions archives in dev
+        type: string
+        required: false
+        default: ""
     secrets:
       ci-cd-key-dev:
         description: CICD Service Account credentials in dev environment
@@ -86,6 +91,8 @@ jobs:
       kubernetes-changes-base: ${{ steps.info.outputs.kubernetes-changes-base }}
       apps-changes: ${{ steps.info.outputs.apps-changes }}
       jobs-changes: ${{ steps.info.outputs.jobs-changes }}
+      cloud-functions-changes: ${{ steps.info.outputs.cloud-functions-changes }}
+      cloud-functions-matrix: ${{ steps.info.outputs.cloud-functions-list-changes }}
 
   sync-app-image-registry:
     permissions:
@@ -112,6 +119,33 @@ jobs:
           maven-workload-identity-service-account: ${{ inputs.maven-workload-identity-service-account }}
           docker-workload-identity-provider: ${{ inputs.docker-workload-identity-provider }}
           docker-workload-identity-service-account: ${{ inputs.docker-workload-identity-service-account }}
+
+  push-cloud-functions:
+    permissions:
+      contents: 'write'
+      id-token: 'write'
+    name: Push Cloud Functions
+    runs-on: ubuntu-20.04
+    needs:
+      - init
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.init.outputs.cloud-functions-matrix) }}
+    if: |
+      always() 
+      && needs.init.outputs.cloud-functions-changes == 'true'
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+      - name: push
+        uses: Ki-Insurance/github-data-workflows/.github/actions/cloud_functions/push@v1
+        with:
+          java-version: 17
+          gcp-service-account-key: ${{ secrets.ci-cd-key-dev }}
+          deployment-bucket: ${{ inputs.cloud-function-deployment-bucket }}
+          working-directory: cloud_functions/${{ matrix.function }}
+          workload-identity-provider: ${{ inputs.maven-workload-identity-provider }}
+          workload-identity-service-account: ${{ inputs.maven-workload-identity-service-account }}
 
   sync-job-image-registry:
     permissions:
@@ -245,6 +279,7 @@ jobs:
       - sync-app-image-registry
       - sync-job-image-registry
       - validate-kubernetes-live
+      - push-cloud-functions
     if: |
       always() 
       && needs.init.result != 'failure' 
@@ -254,6 +289,7 @@ jobs:
       && needs.terragrunt-apply-dev.result != 'failure' 
       && needs.terragrunt-plan-live.result != 'failure' 
       && needs.validate-kubernetes-live.result != 'failure'
+      && needs.push-cloud-functions.result != 'failure'
     steps:
       - name: checkout
         uses: actions/checkout@v2.4.0

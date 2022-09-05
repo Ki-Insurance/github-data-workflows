@@ -16,6 +16,10 @@ inputs:
     description: Jobs Directory
     required: true
     default: jobs
+  cloud-functions-directory:
+    description: Cloud functions root directory
+    required: true
+    default: cloud_functions
   kubernetes-root-directory:
     description: Kubernetes root directory
     required: true
@@ -50,6 +54,12 @@ outputs:
   jobs-list-changes:
     description: Did any cloud functions app change?
     value: ${{ steps.jobs-list-changes.outputs.value }}
+  cloud-functions-changes:
+    description: Did any cloud functions app change?
+    value: ${{ steps.cloud-functions-changes.outputs.any_modified }}
+  cloud-functions-list-changes:
+    description: List of cloud function files that changed (JSON FORMAT)
+    value: ${{ steps.cloud-functions-list-changes.outputs.value }}
   kubernetes-changes-overlay-dev:
     description: Did kubernetes dev overlay change?
     value: ${{ steps.kubernetes-changes-overlay-dev.outputs.any_modified }}
@@ -135,6 +145,27 @@ runs:
             FOLDER_LIST="${FOLDER_LIST} \"${job}\","
           fi
         done <<< "$(cat /tmp/joblist | uniq)"
+        FOLDER_LIST="${FOLDER_LIST:0:-1} ] }"
+        FOLDER_LIST=$(echo $FOLDER_LIST | jq -c .)
+        echo "::set-output name=value::${FOLDER_LIST}"
+      shell: bash
+    - name: check any cloud function changes
+      id: cloud-functions-changes
+      uses: tj-actions/changed-files@v23
+      with:
+        files: ${{ inputs.cloud-functions-directory }}/**
+    - name: get list of cloud function that changed
+      id: cloud-functions-list-changes
+      run: |
+        while IFS= read -r change; do
+          echo $change | cut -d '/' -f2 >> /tmp/functionlist
+        done <<< $(echo "${{ steps.cloud-functions-changes.outputs.all_changed_and_modified_files }}" | tr " " "\n")
+        FOLDER_LIST='{ "function": [ '
+        while IFS= read -r function; do
+          if [[ ! -z "$function" ]]; then
+            FOLDER_LIST="${FOLDER_LIST} \"${function}\","
+          fi
+        done <<< "$(cat /tmp/functionlist | uniq)"
         FOLDER_LIST="${FOLDER_LIST:0:-1} ] }"
         FOLDER_LIST=$(echo $FOLDER_LIST | jq -c .)
         echo "::set-output name=value::${FOLDER_LIST}"

@@ -40,6 +40,11 @@ on:
         type: string
         required: false
         default: false
+      cloud-functions-integration-test:
+        description: run cloud function integration test?
+        type: string
+        required: false
+        default: false
     secrets:
       ci-cd-key-dev:
         description: CICD Key Containing the Service Account credentials in dev environment
@@ -68,12 +73,14 @@ jobs:
       terragunt-live-config-changes: ${{ steps.info.outputs.terragunt-live-config-changes }}
       apps-changes: ${{ steps.info.outputs.apps-changes }}
       jobs-changes: ${{ steps.info.outputs.jobs-changes }}
+      cloud-functions-changes: ${{ steps.info.outputs.cloud-functions-changes }}
       kubernetes-changes-overlay-dev: ${{ steps.info.outputs.kubernetes-changes-overlay-dev }}
       kubernetes-changes-overlay-live: ${{ steps.info.outputs.kubernetes-changes-overlay-live }}
       kubernetes-changes-base: ${{ steps.info.outputs.kubernetes-changes-base }}
       last-author: ${{ steps.info.outputs.last-author }}
       apps-matrix: ${{ steps.info.outputs.apps-list-changes}}
       jobs-matrix: ${{ steps.info.outputs.jobs-list-changes }}
+      cloud-functions-matrix: ${{ steps.info.outputs.cloud-functions-list-changes }}
 
   validate-kubernetes-dev:
     name: Validate Kubernetes DEV
@@ -162,6 +169,33 @@ jobs:
           integration: ${{ inputs.jobs-integration-test }}
           workload-identity-provider: ${{ inputs.pypi-workload-identity-provider }}
           workload-identity-service-account: ${{ inputs.pypi-workload-identity-service-account }}
+
+  tests-cloud-functions:
+    permissions:
+      contents: 'write'
+      id-token: 'write'
+    name: Test Cloud Functions
+    runs-on: ubuntu-20.04
+    needs:
+      - init
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.init.outputs.cloud-functions-matrix) }}
+    if: |
+      always() 
+      && needs.init.outputs.cloud-functions-changes == 'true'
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+      - name: tests
+        uses: Ki-Insurance/github-data-workflows/.github/actions/cloud_functions/graddle@v1
+        with:
+          java-version: 17
+          gcp-service-account-key: ${{ secrets.ci-cd-key-dev }}
+          working-directory: cloud_functions/${{ matrix.function }}
+          integration: ${{ inputs.cloud-functions-integration-test }}
+          workload-identity-provider: ${{ inputs.maven-workload-identity-provider }}
+          workload-identity-service-account: ${{ inputs.maven-workload-identity-service-account }}
 
   terragrunt-plan-dev:
     name: Terragrunt Plan DEV
@@ -280,5 +314,46 @@ jobs:
         with:
           dockerfile-dir: jobs/${{ matrix.job }}
           registry: ${{ inputs.registry }}
+          git-commit-user: ${{ inputs.git-commit-user }}
+          git-commit-email:  ${{ inputs.git-commit-email }}
+
+  bump-cloud-functions:
+    name: Bump Cloud Functions
+    runs-on: ubuntu-20.04
+    needs:
+      - init
+      - terragrunt-plan-dev
+      - terragrunt-plan-live
+      - tests-apps
+      - tests-jobs
+      - validate-kubernetes-dev
+      - validate-kubernetes-live
+      - bump-apps-image
+      - bump-jobs-image
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.init.outputs.cloud-functions-matrix) }}
+      max-parallel: 1
+    if: |
+      always() 
+      && needs.init.outputs.cloud-functions-changes == 'true' 
+      && needs.terragrunt-plan-dev.result != 'failure' 
+      && needs.terragrunt-plan-live.result != 'failure' 
+      && needs.validate-kubernetes-dev.result != 'failure' 
+      && needs.validate-kubernetes-live.result != 'failure' 
+      && needs.tests-apps.result != 'failure' 
+      && needs.tests-jobs.result != 'failure' 
+      && needs.bump-and-validate-apps-image.result != 'failure' 
+      && needs.bump-jobs-image.result != 'failure' 
+      && needs.init.outputs.last-author != 'ki-cicd'
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2.4.0
+      - name: fetch branch
+        run: git fetch origin ${GITHUB_HEAD_REF} && git checkout ${GITHUB_HEAD_REF}
+      - name: bump cloud function
+        uses: Ki-Insurance/github-data-workflows/.github/actions/cloud_functions/bump@v1
+        with:
+          cloud-function-name: ${{ matrix.function }}
           git-commit-user: ${{ inputs.git-commit-user }}
           git-commit-email:  ${{ inputs.git-commit-email }}
