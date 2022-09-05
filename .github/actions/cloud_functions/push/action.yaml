@@ -39,7 +39,7 @@ runs:
     - name: get archive path
       id: archive
       run: |
-        ARCHIVE_PATH=$(yq e '.cloud_functions[] | filter( .name == "${{ inputs.functions-app-name }}" ) | .archive_path' '${{ inputs.cloud-function-tf-config-file }}')
+        ARCHIVE_PATH=$(yq e '.cloud_functions[] | select( .name == "${{ inputs.functions-app-name }}" ) | .archive_path' '${{ inputs.cloud-function-tf-config-file }}')
         echo "::set-output name=path::${ARCHIVE_PATH}"
       shell: bash
     - name: Setup Java
