@@ -188,7 +188,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2.4.0
       - name: tests
-        uses: Ki-Insurance/github-data-workflows/.github/actions/cloud_functions/graddle@v1
+        uses: Ki-Insurance/github-data-workflows/.github/actions/cloud_functions/gradle@v1
         with:
           java-version: 17
           gcp-service-account-key: ${{ secrets.ci-cd-key-dev }}
