@@ -58,8 +58,7 @@ runs:
     - name: Deployment of the archive to relevant folder
       working-directory: ${{ inputs.working-directory }}
       run: |
-        gcloud auth list
         cd build/libs/
         zip shadow-all.zip shadow-all.jar
-        gsutil cp shadow-all.zip gs://${{ inputs.deployment-bucket }}/${{ steps.archive.outputs.path }}
+        gcloud alpha storage cp shadow-all.zip gs://${{ inputs.deployment-bucket }}/${{ steps.archive.outputs.path }}
       shell: bash
