@@ -117,7 +117,9 @@ runs:
         FOLDER_LIST='{ "app": [ '
         while IFS= read -r app; do
           if [[ ! -z "$app" ]]; then
-            FOLDER_LIST="${FOLDER_LIST} \"${app}\","
+            if [ -d "${{ inputs.apps-directory }}/$app" ]; then
+              FOLDER_LIST="${FOLDER_LIST} \"${app}\","
+            fi
           fi
         done <<< "$(cat /tmp/list | uniq)"
         FOLDER_LIST="${FOLDER_LIST:0:-1} ] }"
@@ -142,7 +144,9 @@ runs:
         FOLDER_LIST='{ "job": [ '
         while IFS= read -r job; do
           if [[ ! -z "job" ]]; then
-            FOLDER_LIST="${FOLDER_LIST} \"${job}\","
+            if [ -d "${{ inputs.jobs-directory }}/job" ]; then
+              FOLDER_LIST="${FOLDER_LIST} \"${job}\","
+            fi
           fi
         done <<< "$(cat /tmp/joblist | uniq)"
         FOLDER_LIST="${FOLDER_LIST:0:-1} ] }"
@@ -164,7 +168,9 @@ runs:
         FOLDER_LIST='{ "function": [ '
         while IFS= read -r function; do
           if [[ ! -z "$function" ]]; then
-            FOLDER_LIST="${FOLDER_LIST} \"${function}\","
+            if [ -d "${{ inputs.cloud-functions-directory }}/$function" ]; then
+              FOLDER_LIST="${FOLDER_LIST} \"${function}\","
+            fi
           fi
         done <<< "$(cat /tmp/functionlist | uniq)"
         FOLDER_LIST="${FOLDER_LIST:0:-1} ] }"

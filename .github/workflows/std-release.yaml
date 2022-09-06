@@ -74,7 +74,8 @@ jobs:
       matrix: ${{ fromJson(needs.init.outputs.cloud-functions-matrix) }}
     if: |
       always() 
-      && needs.init.outputs.cloud-functions-changes == 'true'
+      && needs.init.outputs.cloud-functions-changes == 'true' 
+      && needs.init.outputs.cloud-functions-matrix != '{"function":[]}'
     steps:
       - name: checkout
         uses: actions/checkout@v2.4.0

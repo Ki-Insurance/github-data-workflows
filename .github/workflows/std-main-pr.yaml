@@ -140,7 +140,8 @@ jobs:
       matrix: ${{ fromJson(needs.init.outputs.apps-matrix) }}
     if: |
       always() 
-      && needs.init.outputs.apps-changes == 'true'
+      && needs.init.outputs.apps-changes == 'true' 
+      && needs.init.outputs.apps-matrix != '{"app":[]}'
     steps:
       - name: checkout
         uses: actions/checkout@v2.4.0
@@ -167,7 +168,8 @@ jobs:
       matrix: ${{ fromJson(needs.init.outputs.jobs-matrix) }}
     if: |
       always() 
-      && needs.init.outputs.jobs-changes == 'true'
+      && needs.init.outputs.jobs-changes == 'true' 
+      && needs.init.outputs.jobs-matrix != '{"job":[]}'
     steps:
       - name: checkout
         uses: actions/checkout@v2.4.0
@@ -194,7 +196,8 @@ jobs:
       matrix: ${{ fromJson(needs.init.outputs.cloud-functions-matrix) }}
     if: |
       always() 
-      && needs.init.outputs.cloud-functions-changes == 'true'
+      && needs.init.outputs.cloud-functions-changes == 'true' 
+      && needs.init.outputs.cloud-functions-matrix != '{"function":[]}'
     steps:
       - name: checkout
         uses: actions/checkout@v2.4.0
@@ -290,7 +293,8 @@ jobs:
       && needs.tests-apps.result != 'failure' 
       && needs.tests-jobs.result != 'failure' 
       && needs.tests-cloud-functions.result != 'failure' 
-      && needs.init.outputs.last-author != 'ki-cicd'
+      && needs.init.outputs.last-author != 'ki-cicd' 
+      && needs.init.outputs.apps-matrix != '{"app":[]}'
     steps:
       - name: checkout
         uses: actions/checkout@v2.4.0
@@ -332,7 +336,8 @@ jobs:
       && needs.tests-jobs.result != 'failure' 
       && needs.tests-cloud-functions.result != 'failure' 
       && needs.bump-and-validate-apps-image.result != 'failure' 
-      && needs.init.outputs.last-author != 'ki-cicd'
+      && needs.init.outputs.last-author != 'ki-cicd' 
+      && needs.init.outputs.jobs-matrix != '{"job":[]}'
     steps:
       - name: checkout
         uses: actions/checkout@v2.4.0
@@ -376,7 +381,8 @@ jobs:
       && needs.bump-and-validate-apps-image.result != 'failure' 
       && needs.bump-jobs-image.result != 'failure' 
       && needs.tests-cloud-functions.result != 'failure' 
-      && needs.init.outputs.last-author != 'ki-cicd'
+      && needs.init.outputs.last-author != 'ki-cicd' 
+      && needs.init.outputs.cloud-functions-matrix != '{"function":[]}'
     steps:
       - name: checkout
         uses: actions/checkout@v2.4.0
