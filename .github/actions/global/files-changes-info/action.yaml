@@ -77,7 +77,7 @@ runs:
   steps:
     - name: check terragrunt base changes
       id: terragrunt-base-changes
-      uses: tj-actions/changed-files@v29
+      uses: tj-actions/changed-files@v29.0.3
       with:
         files: |
           ${{ inputs.terragrunt-root-directory }}/**
@@ -87,21 +87,21 @@ runs:
         base_sha: ${{ inputs.base-sha }}
     - name: check terragrunt dev config changes
       id: terragunt-dev-config-changes
-      uses: tj-actions/changed-files@v29
+      uses: tj-actions/changed-files@v29.0.3
       with:
         files: |
           ${{ inputs.terragrunt-root-directory }}/vars/dev.yaml
         base_sha: ${{ inputs.base-sha }}
     - name: check terragrunt live config changes
       id: terragunt-live-config-changes
-      uses: tj-actions/changed-files@v29
+      uses: tj-actions/changed-files@v29.0.3
       with:
         files: |
           ${{ inputs.terragrunt-root-directory }}/vars/live.yaml
         base_sha: ${{ inputs.base-sha }}
     - name: check any apps changes
       id: apps-changes
-      uses: tj-actions/changed-files@v29
+      uses: tj-actions/changed-files@v29.0.3
       with:
         files: ${{ inputs.apps-directory }}/**
         files_ignore: |
@@ -128,7 +128,7 @@ runs:
       shell: bash
     - name: check any jobs have changed
       id: jobs-changes
-      uses: tj-actions/changed-files@v29
+      uses: tj-actions/changed-files@v29.0.3
       with:
         files: ${{ inputs.jobs-directory }}/**
         files_ignore: |
@@ -155,7 +155,7 @@ runs:
       shell: bash
     - name: check any cloud function changes
       id: cloud-functions-changes
-      uses: tj-actions/changed-files@v29
+      uses: tj-actions/changed-files@v29.0.3
       with:
         files: ${{ inputs.cloud-functions-directory }}/**
         base_sha: ${{ inputs.base-sha }}
@@ -179,19 +179,19 @@ runs:
       shell: bash
     - name: check kubernetes changes overlay dev
       id: kubernetes-changes-overlay-dev
-      uses: tj-actions/changed-files@v29
+      uses: tj-actions/changed-files@v29.0.3
       with:
         files: ${{ inputs.kubernetes-root-directory }}/${{ inputs.kubernetes-overlays-directory }}/dev/**
         base_sha: ${{ inputs.base-sha }}
     - name: check kubernetes changes overlay live
       id: kubernetes-changes-overlay-live
-      uses: tj-actions/changed-files@v29
+      uses: tj-actions/changed-files@v29.0.3
       with:
         files: ${{ inputs.kubernetes-root-directory }}/${{ inputs.kubernetes-overlays-directory }}/live/**
         base_sha: ${{ inputs.base-sha }}
     - name: check kubernetes changes base
       id: kubernetes-changes-base
-      uses: tj-actions/changed-files@v29
+      uses: tj-actions/changed-files@v29.0.3
       with:
         files: ${{ inputs.kubernetes-root-directory }}/${{ inputs.kubernetes-base-directory }}/**
         base_sha: ${{ inputs.base-sha }}
