@@ -24,6 +24,8 @@ runs:
   steps:
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v0
+      with:
+        install_components: alpha
     - name: Authenticate to Google Cloud
       uses: google-github-actions/auth@v0
       with:
@@ -31,7 +33,7 @@ runs:
     - name: Get Last Jar
       id: archive
       run: |
-        LAST_ARCHIVE=$(gsutil ls "gs://${{ inputs.deployment-bucket-dev }}/cloud_functions/${{ inputs.cloud-function-name }}/version/**" | tail -n 1)
+        LAST_ARCHIVE=$(gcloud alpha storage ls "gs://${{ inputs.deployment-bucket-dev }}/cloud_functions/${{ inputs.cloud-function-name }}/version/**" | tail -n 1)
         VERSION=$(echo ${LAST_ARCHIVE} | cut -d '/' -f7)
         echo "::set-output name=path::${LAST_ARCHIVE}"
         echo "::set-output name=version::${VERSION}"
@@ -46,5 +48,5 @@ runs:
         credentials_json: ${{ inputs.gcp-service-account-key-live }}
     - name: Copy Local archive to Live
       working-directory: ${{ inputs.working-directory }}
-      run: gcloud -q alpha storage cp ./*.zip gs://${{ inputs.deployment-bucket-live }}/cloud_functions/${{ inputs.cloud-function-name }}/version/${{ steps.archive.outputs.version }}/
+      run: gcloud alpha storage cp ./*.zip gs://${{ inputs.deployment-bucket-live }}/cloud_functions/${{ inputs.cloud-function-name }}/version/${{ steps.archive.outputs.version }}/
       shell: bash

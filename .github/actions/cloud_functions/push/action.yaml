@@ -31,6 +31,8 @@ runs:
   steps:
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v0
+      with:
+        install_components: alpha
     - name: Authenticate to Artifact Registry
       uses: google-github-actions/auth@v0
       with:
@@ -60,5 +62,5 @@ runs:
       run: |
         cd build/libs/
         zip shadow-all.zip shadow-all.jar
-        gcloud -q alpha storage cp shadow-all.zip gs://${{ inputs.deployment-bucket }}/${{ steps.archive.outputs.path }}
+        gcloud alpha storage cp shadow-all.zip gs://${{ inputs.deployment-bucket }}/${{ steps.archive.outputs.path }}
       shell: bash
