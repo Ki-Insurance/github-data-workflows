@@ -14,7 +14,7 @@ inputs:
   deployment-bucket:
     description: GCS bucket to store the archive
     required: true
-  functions-app-name:
+  cloud-function-name:
     description: The name of the function being deployed
     required: true
   working-directory:
@@ -39,7 +39,7 @@ runs:
     - name: get archive path
       id: archive
       run: |
-        ARCHIVE_PATH=$(yq e '.cloud_functions[] | select( .name == "${{ inputs.functions-app-name }}" ) | .archive_path' '${{ inputs.cloud-function-tf-config-file }}')
+        ARCHIVE_PATH=$(yq e '.cloud_functions[] | select( .name == "${{ inputs.cloud-function-name }}" ) | .archive_path' '${{ inputs.cloud-function-tf-config-file }}')
         echo "::set-output name=path::${ARCHIVE_PATH}"
       shell: bash
     - name: Setup Java
@@ -58,6 +58,7 @@ runs:
     - name: Deployment of the archive to relevant folder
       working-directory: ${{ inputs.working-directory }}
       run: |
+        gcloud auth list
         cd build/libs/
         zip shadow-all.zip shadow-all.jar
         gsutil cp shadow-all.zip gs://${{ inputs.deployment-bucket }}/${{ steps.archive.outputs.path }}

@@ -141,6 +141,7 @@ jobs:
         uses: Ki-Insurance/github-data-workflows/.github/actions/cloud_functions/push@v1
         with:
           java-version: 17
+          cloud-function-name: ${{ matrix.function }}
           gcp-service-account-key: ${{ secrets.ci-cd-key-dev }}
           deployment-bucket: ${{ inputs.cloud-function-deployment-bucket }}
           working-directory: cloud_functions/${{ matrix.function }}
@@ -180,12 +181,14 @@ jobs:
       - init
       - sync-app-image-registry
       - sync-job-image-registry
+      - push-cloud-functions
     if: |
       always() 
       && ( needs.init.outputs.terragunt-dev-config-changes == 'true' 
         || needs.init.outputs.terragrunt-base-changes == 'true' ) 
       && needs.sync-app-image-registry.result != 'failure' 
-      && needs.sync-job-image-registry.result != 'failure'
+      && needs.sync-job-image-registry.result != 'failure' 
+      && needs.push-cloud-functions.result != 'failure'
     steps:
       - name: checkout
         uses: actions/checkout@v2.4.0
