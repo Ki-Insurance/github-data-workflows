@@ -154,6 +154,7 @@ runs:
       uses: tj-actions/changed-files@v23
       with:
         files: ${{ inputs.cloud-functions-directory }}/**
+        base_sha: ${{ inputs.base-sha }}
     - name: get list of cloud function that changed
       id: cloud-functions-list-changes
       run: |
