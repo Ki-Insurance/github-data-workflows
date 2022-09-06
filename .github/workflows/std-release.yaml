@@ -20,6 +20,11 @@ on:
         type: string
         required: false
         default: ""
+      azure-tf:
+        description: setup Azure credentials for tf workflow?
+        type: string
+        required: false
+        default: 'false'
     secrets:
       ci-cd-key-dev:
         description: CICD Service Account credentials in dev environment
@@ -30,6 +35,9 @@ on:
       k8s-key:
         description: CICD Service Account credentials to access k8s prod cluster
         required: true
+      azure-credentials:
+        description: azure credentials for terraform
+        required: false
 
 jobs:
   init:
@@ -94,6 +102,13 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v2.4.0
+      - name: azure login
+        if: inputs.azure-tf == 'true'
+        run: |
+          echo "ARM_CLIENT_ID=$(echo '${{ secrets.azure-credentials }}' | jq -r '.clientId')" >> $GITHUB_ENV
+          echo "ARM_CLIENT_SECRET=$(echo '${{ secrets.azure-credentials }}' | jq -r '.clientSecret')" >> $GITHUB_ENV
+          echo "ARM_SUBSCRIPTION_ID=$(echo '${{ secrets.azure-credentials }}' | jq -r '.subscriptionId')" >> $GITHUB_ENV
+          echo "ARM_TENANT_ID=$(echo '${{ secrets.azure-credentials }}' | jq -r '.tenantId')" >> $GITHUB_ENV
       - name: terragrunt apply
         uses: Ki-Insurance/github-data-workflows/.github/actions/terragrunt/apply@v1
         with:

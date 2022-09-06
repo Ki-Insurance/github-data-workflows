@@ -47,6 +47,11 @@ on:
         type: string
         required: false
         default: ""
+      azure-tf:
+        description: setup Azure credentials for tf workflow?
+        type: string
+        required: false
+        default: 'false'
     secrets:
       ci-cd-key-dev:
         description: CICD Service Account credentials in dev environment
@@ -60,6 +65,12 @@ on:
       github-token:
         description: GitHub Token
         required: true
+      azure-credentials-dev:
+        description: azure credentials for terraform
+        required: false
+      azure-credentials-live:
+        description: azure credentials for terraform
+        required: false
 
 jobs:
   init:
@@ -192,6 +203,13 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v2.4.0
+      - name: azure login
+        if: inputs.azure-tf == 'true'
+        run: |
+          echo "ARM_CLIENT_ID=$(echo '${{ secrets.azure-credentials-dev }}' | jq -r '.clientId')" >> $GITHUB_ENV
+          echo "ARM_CLIENT_SECRET=$(echo '${{ secrets.azure-credentials-dev }}' | jq -r '.clientSecret')" >> $GITHUB_ENV
+          echo "ARM_SUBSCRIPTION_ID=$(echo '${{ secrets.azure-credentials-dev }}' | jq -r '.subscriptionId')" >> $GITHUB_ENV
+          echo "ARM_TENANT_ID=$(echo '${{ secrets.azure-credentials-dev }}' | jq -r '.tenantId')" >> $GITHUB_ENV
       - name: terragrunt apply
         uses: Ki-Insurance/github-data-workflows/.github/actions/terragrunt/apply@v1
         with:
@@ -216,6 +234,13 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v2.4.0
+      - name: azure login
+        if: inputs.azure-tf == 'true'
+        run: |
+          echo "ARM_CLIENT_ID=$(echo '${{ secrets.azure-credentials-live }}' | jq -r '.clientId')" >> $GITHUB_ENV
+          echo "ARM_CLIENT_SECRET=$(echo '${{ secrets.azure-credentials-live }}' | jq -r '.clientSecret')" >> $GITHUB_ENV
+          echo "ARM_SUBSCRIPTION_ID=$(echo '${{ secrets.azure-credentials-live }}' | jq -r '.subscriptionId')" >> $GITHUB_ENV
+          echo "ARM_TENANT_ID=$(echo '${{ secrets.azure-credentials-live }}' | jq -r '.tenantId')" >> $GITHUB_ENV
       - name: terragrunt plan
         uses: Ki-Insurance/github-data-workflows/.github/actions/terragrunt/plan@v1
         with:
