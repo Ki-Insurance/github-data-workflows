@@ -38,7 +38,7 @@ runs:
         APP=$(echo '${{ steps.image.outputs.name }}' | cut -d '_' -f2-)
         TYPE=$(echo '${{ steps.image.outputs.name }}' | cut -d '_' -f1)
         IMAGE="${{ inputs.registry }}/${{ steps.image.outputs.name }}:${{ steps.image.outputs.tag }}"
-        yq -i -e "select( .metadata.name == \"${APP}\").spec.values.image |= \"${IMAGE}\"" "${{ inputs.base-path }}/${TYPE}s.yaml"
+        yq -i -e "(select( .metadata.name == \"${APP}\").spec.values.image) |= \"${IMAGE}\"" "${{ inputs.base-path }}/${TYPE}s.yaml"
       shell: bash
     - name: commit versions
       run: |
