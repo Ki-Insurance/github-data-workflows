@@ -46,5 +46,5 @@ runs:
         credentials_json: ${{ inputs.gcp-service-account-key-live }}
     - name: Copy Local archive to Live
       working-directory: ${{ inputs.working-directory }}
-      run: gcloud alpha storage cp ./*.zip gs://${{ inputs.deployment-bucket-live }}/cloud_functions/${{ inputs.cloud-function-name }}/version/${{ steps.archive.outputs.version }}/
+      run: gcloud -q alpha storage cp ./*.zip gs://${{ inputs.deployment-bucket-live }}/cloud_functions/${{ inputs.cloud-function-name }}/version/${{ steps.archive.outputs.version }}/
       shell: bash

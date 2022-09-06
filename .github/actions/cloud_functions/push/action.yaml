@@ -60,5 +60,5 @@ runs:
       run: |
         cd build/libs/
         zip shadow-all.zip shadow-all.jar
-        gcloud alpha storage cp shadow-all.zip gs://${{ inputs.deployment-bucket }}/${{ steps.archive.outputs.path }}
+        gcloud -q alpha storage cp shadow-all.zip gs://${{ inputs.deployment-bucket }}/${{ steps.archive.outputs.path }}
       shell: bash
