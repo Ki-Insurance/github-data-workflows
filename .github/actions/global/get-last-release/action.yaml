@@ -13,7 +13,8 @@ runs:
         GITHUB_TOKEN: ${{ github.token }}
       run: |
         RELEASES=$(gh api --paginate "/repos/${{ github.repository }}/releases" | jq '.[] | select( .draft == false and .prerelease == false ) | {tag:.tag_name, sha:.target_commitish}' | jq --slurp || true)
-        if [[ -z "${RELEASES}" ]] || [[ "${RELEASES}" == "[]" ]] ; then
+        
+        if [[ -z "${RELEASES}" ]] || [ $(echo $RELEASES | jq '. | length') -le 1 ] ; then
           echo "no previous release found"
           SHA=""
         else
