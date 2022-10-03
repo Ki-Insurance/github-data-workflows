@@ -20,7 +20,7 @@ runs:
         else
           LENGTH=$(echo "${RELEASES}" | jq 'length')
           PREVIOUS_VERSION_INDEX=$((LENGTH-2))
-          SHA=$(echo ${RELEASES} | jq -r "sort_by(.tag) | .[${PREVIOUS_VERSION_INDEX}] | .sha")
+          SHA=$(echo ${RELEASES} | jq -r ".[${PREVIOUS_VERSION_INDEX}] | .sha")
         fi
         echo "::set-output name=commit_hash::${SHA}"
       shell: bash
