@@ -13,14 +13,11 @@ runs:
         GITHUB_TOKEN: ${{ github.token }}
       run: |
         RELEASES=$(gh api --paginate "/repos/${{ github.repository }}/releases" | jq '.[] | select( .draft == false and .prerelease == false ) | {tag:.tag_name, sha:.target_commitish}' | jq --slurp || true)
-        
-        if [[ -z "${RELEASES}" ]] || [ $(echo $RELEASES | jq '. | length') -le 1 ] ; then
+        if [[ -z "${RELEASES}" ]] || [ $(echo $RELEASES | jq '. | length') -le 2 ] ; then
           echo "no previous release found"
           SHA=""
         else
-          LENGTH=$(echo "${RELEASES}" | jq 'length')
-          PREVIOUS_VERSION_INDEX=$((LENGTH-2))
-          SHA=$(echo ${RELEASES} | jq -r ".[${PREVIOUS_VERSION_INDEX}] | .sha")
+          SHA=$(echo ${RELEASES} | jq -r ".[1] | .sha")
         fi
         echo "::set-output name=commit_hash::${SHA}"
       shell: bash
