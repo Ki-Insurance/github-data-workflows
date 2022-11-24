@@ -5,7 +5,7 @@
     workflow_call:
       inputs:
         container-names-matrix:
-          # NB Dockerfile must be in "docker/<container-name>.Dockerfile" format
+          # NB Dockerfile must be in "<container-name>.Dockerfile" format
           default: "['default-container-name']"
           required: true
           type: choice
@@ -86,7 +86,7 @@
           POETRY_HTTP_BASIC_GOOGLE_PASSWORD: ${{ steps.auth.outputs.access_token }}
           DOCKER_BUILDKIT: 1
         run: |
-          docker build --secret=id=POETRY_HTTP_BASIC_GOOGLE_PASSWORD -f docker/${{ matrix.container-name}}.Dockerfile . -t ${{ matrix.container-name }}
+          docker build --secret=id=POETRY_HTTP_BASIC_GOOGLE_PASSWORD -f ${{ matrix.container-name}}/Dockerfile . -t ${{ matrix.container-name }}
           docker tag ${{ matrix.container-name }} ${{ matrix.container-name }}:${{ github.run_number }}
       - name: Authenticate to registries project
         uses: google-github-actions/auth@v0
