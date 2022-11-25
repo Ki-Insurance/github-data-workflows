@@ -1,5 +1,4 @@
 name: Scan container
-description: Using gcloud, scans containers for any CVEs (cybervulnerabilities)
 
 on:
   workflow_call:
