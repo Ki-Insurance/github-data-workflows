@@ -1,50 +1,51 @@
-  name: Scan container
-  description: Using gcloud, scans containers for any CVEs (cybervulnerabilities)
+name: Scan container
+description: Using gcloud, scans containers for any CVEs (cybervulnerabilities)
 
-  on:
-    workflow_call:
-      inputs:
-        container-names-matrix:
-          # NB Dockerfile must be in "<container-name>/Dockerfile" format
-          default: "['default-container-name']"
-          required: true
-          type: choice
+on:
+  workflow_call:
+    inputs:
+      container-names-matrix:
+        # NB Dockerfile must be in "<container-name>/Dockerfile" format
+        default: "['default-container-name']"
+        required: true
+        type: choice
 
-        poetry-google-username:
-          default: 'None'
-          reqiured: true
-          type: string  
+      poetry-google-username:
+        default: 'None'
+        reqiured: true
+        type: string  
 
-        artifact-registries:
-          default: 'None'
-          required: true
-          type: string
+      artifact-registries:
+        default: 'None'
+        required: true
+        type: string
 
-        pypi-url:
-          default: 'None'
-          required: true
-          type: string
+      pypi-url:
+        default: 'None'
+        required: true
+        type: string
 
-        pypi-workload-identity-provider:
-          default: 'None'
-          required: true
-          type: string
+      pypi-workload-identity-provider:
+        default: 'None'
+        required: true
+        type: string
 
-        pypi-workload-identity-service-account:
-          default: 'None'
-          required: true
-          type: string
+      pypi-workload-identity-service-account:
+        default: 'None'
+        required: true
+        type: string
 
-        docker-workload-identity-provider:
-          default: 'None'
-          required: true
-          type: string
+      docker-workload-identity-provider:
+        default: 'None'
+        required: true
+        type: string
 
-        docker-workload-identity-provider-service-account:
-          default: 'None'
-          required: true
-          type: string
-  
+      docker-workload-identity-provider-service-account:
+        default: 'None'
+        required: true
+        type: string
+
+jobs:
   container-scans:
     name: Container Scans
     runs-on: ubuntu-latest
