@@ -11,7 +11,7 @@ on:
 
       poetry-google-username:
         default: 'None'
-        reqiured: true
+        required: true
         type: string  
 
       artifact-registries:
@@ -39,7 +39,7 @@ on:
         required: true
         type: string
 
-      docker-workload-identity-provider-service-account:
+      docker-workload-identity-service-account:
         default: 'None'
         required: true
         type: string
