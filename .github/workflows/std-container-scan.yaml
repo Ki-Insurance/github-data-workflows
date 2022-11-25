@@ -7,7 +7,7 @@ on:
         # NB Dockerfile must be in "<container-name>/Dockerfile" format
         default: "['default-container-name']"
         required: true
-        type: choice
+        type: string
 
       poetry-google-username:
         default: 'None'
